@@ -31,3 +31,20 @@
         outline-offset: 3px;
     }
 }
+
+@layer utilities {
+    .motion-quick {
+        transition-duration: 200ms;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

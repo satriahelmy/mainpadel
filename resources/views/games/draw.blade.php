@@ -14,9 +14,9 @@
             <section class="mt-10 border-t border-stone-200 pt-8">
                 <h2 class="text-2xl font-bold text-stone-950">Ready to draw</h2>
                 <p class="mt-2 max-w-lg text-base leading-7 text-stone-600">MainPadel will build a fair first round from your active players.</p>
-                <form method="POST" action="{{ route('games.draw.store', $tournament) }}" class="mt-6">
+                <form method="POST" action="{{ route('games.draw.store', $tournament) }}" x-data="{ submitting: false }" @submit="submitting = true" class="mt-6">
                     @csrf
-                    <button type="submit" class="min-h-13 w-full rounded-xl bg-[#c7f000] px-5 text-base font-bold text-stone-950 sm:w-auto sm:px-8">Generate Draw</button>
+                    <button type="submit" :disabled="submitting" class="min-h-13 w-full rounded-xl bg-[#c7f000] px-5 text-base font-bold text-stone-950 disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:px-8"><span x-show="!submitting">Generate Draw</span><span x-show="submitting" x-cloak>Creating a fair draw…</span></button>
                 </form>
             </section>
         @else
@@ -33,28 +33,16 @@
 
                 <div class="mt-6 space-y-4">
                     @foreach ($round->matches as $match)
-                        <article class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
-                            <p class="text-xs font-bold uppercase tracking-[0.18em] text-stone-500">Court {{ $match->court_number }}</p>
-                            @php
-                                $teamA = $match->matchPlayers->where('team.value', 'A');
-                                $teamB = $match->matchPlayers->where('team.value', 'B');
-                            @endphp
-                            <div class="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                                <div class="space-y-1 text-lg font-bold text-stone-950">
-                                    @foreach ($teamA as $assignment)<p>{{ $assignment->player->name }}</p>@endforeach
-                                </div>
-                                <span class="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">VS</span>
-                                <div class="space-y-1 text-right text-lg font-bold text-stone-950">
-                                    @foreach ($teamB as $assignment)<p>{{ $assignment->player->name }}</p>@endforeach
-                                </div>
-                            </div>
-                        </article>
+                        <x-games.match-card :match="$match" :tournament="$tournament" variant="preview" />
                     @endforeach
                 </div>
 
                 @php
                     $playingIds = $round->matches->flatMap(fn ($match) => $match->matchPlayers->pluck('player_id'))->all();
-                    $resting = $tournament->tournamentPlayers->whereNotIn('player_id', $playingIds);
+                    $resting = $tournament->tournamentPlayers->filter(fn ($membership): bool => $membership->status->value === 'active'
+                        && ($membership->joined_at_round === null || $membership->joined_at_round <= $round->round_number)
+                        && ($membership->left_at_round === null || $membership->left_at_round > $round->round_number)
+                        && ! in_array($membership->player_id, $playingIds, true));
                 @endphp
                 @if ($resting->isNotEmpty())
                     <section class="mt-8">
@@ -63,9 +51,9 @@
                     </section>
                 @endif
 
-                <form method="POST" action="{{ route('games.start', $tournament) }}" class="mt-10">
+                <form method="POST" action="{{ route('games.start', $tournament) }}" x-data="{ submitting: false }" @submit="submitting = true" class="mt-10">
                     @csrf
-                    <button type="submit" class="min-h-13 w-full rounded-xl bg-[#c7f000] px-5 text-base font-bold text-stone-950 transition hover:bg-[#b8df00]">Start Game</button>
+                    <button type="submit" :disabled="submitting" class="min-h-13 w-full rounded-xl bg-[#c7f000] px-5 text-base font-bold text-stone-950 transition hover:bg-[#b8df00] disabled:cursor-wait disabled:opacity-60"><span x-show="!submitting">Start Game</span><span x-show="submitting" x-cloak>Starting…</span></button>
                 </form>
                 <div class="mt-4 flex flex-col items-center gap-2 text-sm font-bold text-stone-600 sm:flex-row sm:justify-center sm:gap-5">
                     <a href="{{ route('games.rounds', $tournament) }}" class="min-h-11 py-3 hover:text-stone-950">View all rounds</a>

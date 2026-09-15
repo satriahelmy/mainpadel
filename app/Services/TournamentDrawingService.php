@@ -7,6 +7,7 @@ use App\Enums\MatchTeam;
 use App\Enums\RoundStatus;
 use App\Enums\TournamentPlayerStatus;
 use App\Enums\TournamentStatus;
+use App\Models\MatchModel;
 use App\Models\Round;
 use App\Models\Tournament;
 use App\Services\Drawing\DrawingCandidate;
@@ -86,6 +87,16 @@ final class TournamentDrawingService
     {
         return DB::transaction(function () use ($tournament): ?Round {
             $lockedTournament = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
+
+            $ongoingRound = $lockedTournament->rounds()
+                ->where('status', RoundStatus::Ongoing)
+                ->withCount(['matches as unfinished_matches_count' => fn ($query) => $query->where('status', '!=', MatchStatus::Completed)])
+                ->first();
+
+            if ($ongoingRound !== null && $ongoingRound->unfinished_matches_count > 0) {
+                throw new DrawingException('Complete every match in the current round before continuing.');
+            }
+
             $nextRound = $lockedTournament->rounds()
                 ->where('status', RoundStatus::Scheduled)
                 ->orderBy('round_number')
@@ -96,6 +107,8 @@ final class TournamentDrawingService
 
                 return null;
             }
+
+            $this->assertRoundMatchesActiveRoster($lockedTournament, $nextRound);
 
             $nextRound->update([
                 'status' => RoundStatus::Ongoing,
@@ -167,6 +180,8 @@ final class TournamentDrawingService
                 throw new DrawingException('This round is already completed.');
             }
 
+            $this->assertRoundMatchesActiveRoster($lockedTournament, $round);
+
             $round->update([
                 'status' => RoundStatus::Ongoing,
                 'locked_at' => $round->locked_at ?? now(),
@@ -213,6 +228,7 @@ final class TournamentDrawingService
             numberOfCourts: $tournament->number_of_courts,
             history: $history,
             seed: $seed,
+            includeDiagnostics: (bool) config('mainpadel.drawing.diagnostics', false),
         ));
 
         $round = $tournament->rounds()->create([
@@ -220,6 +236,7 @@ final class TournamentDrawingService
             'status' => RoundStatus::Scheduled,
             'draw_seed' => $result->seed,
             'generated_at' => now(),
+            'drawing_metrics' => $result->metrics(),
         ]);
 
         foreach ($result->matches as $drawingMatch) {
@@ -247,6 +264,27 @@ final class TournamentDrawingService
             $round->load(['matches.matchPlayers.player']),
             new DrawingCandidate($result->matches, $result->restingPlayerIds),
         ];
+    }
+
+    private function assertRoundMatchesActiveRoster(Tournament $tournament, Round $round): void
+    {
+        $activePlayerIds = $this->activePlayerIds($tournament, $round->round_number);
+        if (count($activePlayerIds) < 4) {
+            throw new DrawingException('At least four active players are required before starting this round. Redraw future rounds after roster changes.');
+        }
+
+        $assignedPlayerIds = $round->matches()
+            ->with('matchPlayers')
+            ->get()
+            ->flatMap(fn (MatchModel $match) => $match->matchPlayers->pluck('player_id'))
+            ->map(static fn ($playerId): int => (int) $playerId)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (array_diff($assignedPlayerIds, $activePlayerIds) !== []) {
+            throw new DrawingException('This round no longer matches the active roster. Review and redraw future rounds first.');
+        }
     }
 
     private function historyBefore(Tournament $tournament, int $roundNumber, array $activePlayerIds): FairnessHistory

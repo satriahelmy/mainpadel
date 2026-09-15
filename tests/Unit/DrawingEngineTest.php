@@ -105,6 +105,8 @@ class DrawingEngineTest extends TestCase
     {
         $playerIds = range(1, 12);
         $history = FairnessHistory::empty($playerIds);
+        $prior = $this->service()->generate($this->request($playerIds, 3, $history, seed: 70));
+        $history = $history->after(new DrawingCandidate($prior->matches, $prior->restingPlayerIds));
         $default = $this->service()->generate($this->request($playerIds, 3, $history, seed: 10));
         $restFirst = $this->service()->generate($this->request(
             $playerIds,
@@ -116,11 +118,113 @@ class DrawingEngineTest extends TestCase
 
         self::assertNotEmpty($default->metrics());
         self::assertNotEmpty($restFirst->metrics());
+        self::assertNotSame($this->drawingKey($default), $this->drawingKey($restFirst));
         self::assertSame([], (new DrawingValidator)->validate(
             new DrawingCandidate($restFirst->matches, $restFirst->restingPlayerIds),
             $playerIds,
             3,
         ));
+    }
+
+    public function test_score_components_have_expected_penalty_ordering(): void
+    {
+        $playerIds = range(1, 5);
+        $previousRound = new DrawingCandidate([
+            new DrawingMatch(1, [1, 2], [3, 4]),
+        ], [5]);
+        $history = FairnessHistory::empty($playerIds)->after($previousRound);
+        $scorer = new DrawingScorer;
+        $weights = new DrawingWeights(matchCountImbalance: 1, restImbalance: 1, repeatedPartner: 1, repeatedOpponent: 1, consecutiveRest: 1);
+
+        $score = $scorer->score($previousRound, $playerIds, $history, $weights);
+
+        self::assertSame(2, $score->components['match_count_imbalance']);
+        self::assertSame(2, $score->components['rest_imbalance']);
+        self::assertSame(2, $score->components['repeated_partner']);
+        self::assertSame(4, $score->components['repeated_opponent']);
+        self::assertSame(2, $score->components['consecutive_rest']);
+        self::assertSame(12, $score->penalty);
+    }
+
+    public function test_hand_built_history_penalizes_repeated_partners(): void
+    {
+        $playerIds = range(1, 8);
+        $history = FairnessHistory::empty($playerIds)->after(new DrawingCandidate([
+            new DrawingMatch(1, [1, 2], [3, 4]),
+            new DrawingMatch(2, [5, 6], [7, 8]),
+        ], []));
+        $weights = new DrawingWeights(matchCountImbalance: 0, restImbalance: 0, repeatedPartner: 1, repeatedOpponent: 0, consecutiveRest: 0);
+        $scorer = new DrawingScorer;
+
+        $repeated = $scorer->score(new DrawingCandidate([
+            new DrawingMatch(1, [1, 2], [3, 4]),
+            new DrawingMatch(2, [5, 6], [7, 8]),
+        ], []), $playerIds, $history, $weights);
+        $varied = $scorer->score(new DrawingCandidate([
+            new DrawingMatch(1, [1, 3], [2, 4]),
+            new DrawingMatch(2, [5, 7], [6, 8]),
+        ], []), $playerIds, $history, $weights);
+
+        self::assertGreaterThan($varied->components['repeated_partner'], $repeated->components['repeated_partner']);
+        self::assertGreaterThan($varied->penalty, $repeated->penalty);
+    }
+
+    public function test_drawing_diagnostics_are_opt_in_and_report_candidate_comparisons(): void
+    {
+        $request = new DrawingRequest(
+            activePlayerIds: range(1, 8),
+            numberOfCourts: 2,
+            history: FairnessHistory::empty(range(1, 8)),
+            seed: 12,
+            weights: new DrawingWeights,
+            candidateLimit: 20,
+            includeDiagnostics: true,
+        );
+
+        $result = $this->service()->generate($request);
+
+        self::assertGreaterThan(0, $result->diagnostics['candidate_count']);
+        self::assertGreaterThan(0, $result->diagnostics['valid_candidate_count']);
+        self::assertNotEmpty($result->diagnostics['candidate_penalties']);
+        self::assertArrayHasKey('components', $result->diagnostics['candidate_penalties'][0]);
+    }
+
+    #[DataProvider('fairnessSimulationCombinations')]
+    public function test_multi_round_simulations_keep_fairness_spreads_bounded(int $playerCount, int $courts): void
+    {
+        $playerIds = range(1, $playerCount);
+        $history = FairnessHistory::empty($playerIds);
+
+        for ($round = 1; $round <= 6; $round++) {
+            $result = $this->service()->generate($this->request($playerIds, $courts, $history, seed: 100 + $round));
+
+            self::assertSame([], (new DrawingValidator)->validate(
+                new DrawingCandidate($result->matches, $result->restingPlayerIds),
+                $playerIds,
+                $courts,
+            ));
+
+            $history = $history->after(new DrawingCandidate($result->matches, $result->restingPlayerIds));
+        }
+
+        $last = $this->service()->generate($this->request($playerIds, $courts, $history, seed: 107));
+
+        self::assertLessThanOrEqual(1, $last->metrics()['match_count_spread']);
+        self::assertLessThanOrEqual(1, $last->metrics()['rest_spread']);
+        self::assertArrayHasKey('match_count_variance', $last->metrics());
+        self::assertArrayHasKey('rest_variance', $last->metrics());
+    }
+
+    public static function fairnessSimulationCombinations(): iterable
+    {
+        yield '4/1' => [4, 1];
+        yield '5/1' => [5, 1];
+        yield '6/1' => [6, 1];
+        yield '8/1' => [8, 1];
+        yield '8/2' => [8, 2];
+        yield '10/2' => [10, 2];
+        yield '12/2' => [12, 2];
+        yield '12/3' => [12, 3];
     }
 
     private function service(): DrawingService

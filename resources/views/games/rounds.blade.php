@@ -9,7 +9,7 @@
                 <section class="rounded-2xl border border-stone-200 bg-white p-5">
                     <div class="flex items-center justify-between gap-4">
                         <h2 class="font-bold text-stone-950">Round {{ $round->round_number }}</h2>
-                        <span class="text-xs font-bold uppercase tracking-[0.14em] text-stone-500">{{ $round->status->value }}</span>
+                        <x-ui.status-badge :label="$round->status->value" :tone="$round->status->value === 'ongoing' ? 'current' : 'neutral'" />
                     </div>
                     <div class="mt-4 space-y-3">
                         @foreach ($round->matches as $match)
@@ -27,6 +27,6 @@
                 </section>
             @endforeach
         </div>
-        @include('games.partials.navigation', ['active' => 'rounds'])
+        <x-games.bottom-navigation :tournament="$tournament" active="rounds" />
     </div>
 @endsection

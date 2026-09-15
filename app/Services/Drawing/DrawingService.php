@@ -24,15 +24,28 @@ final class DrawingService
 
         $bestCandidate = null;
         $bestScore = null;
+        $candidateCount = 0;
+        $validCandidateCount = 0;
+        $candidatePenalties = [];
 
         foreach ($this->candidateGenerator->generate($request) as $candidate) {
+            $candidateCount++;
             $errors = $this->validator->validate($candidate, $activePlayerIds, $request->numberOfCourts);
 
             if ($errors !== []) {
                 continue;
             }
 
+            $validCandidateCount++;
             $score = $this->scorer->score($candidate, $activePlayerIds, $request->history, $request->resolvedWeights());
+
+            if ($request->includeDiagnostics) {
+                $candidatePenalties[] = [
+                    'canonical_key' => $candidate->canonicalKey(),
+                    'penalty' => $score->penalty,
+                    'components' => $score->components,
+                ];
+            }
 
             if ($bestScore === null || $score->penalty < $bestScore->penalty || ($score->penalty === $bestScore->penalty && $candidate->canonicalKey() < $bestCandidate->canonicalKey())) {
                 $bestCandidate = $candidate;
@@ -49,6 +62,11 @@ final class DrawingService
             restingPlayerIds: $bestCandidate->restingPlayerIds,
             score: $bestScore,
             seed: $request->seed,
+            diagnostics: $request->includeDiagnostics ? [
+                'candidate_count' => $candidateCount,
+                'valid_candidate_count' => $validCandidateCount,
+                'candidate_penalties' => $candidatePenalties,
+            ] : [],
         );
     }
 }

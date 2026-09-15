@@ -16,6 +16,10 @@ final class ScoreService
             $lockedMatch = MatchModel::query()->lockForUpdate()->with('round.tournament')->findOrFail($match->id);
             $tournament = $lockedMatch->round->tournament;
 
+            if ($scoreA < 0 || $scoreB < 0) {
+                throw new \InvalidArgumentException('Scores cannot be negative.');
+            }
+
             if (($scoreA + $scoreB) !== $tournament->target_points) {
                 throw new \InvalidArgumentException("Scores must total {$tournament->target_points} points.");
             }

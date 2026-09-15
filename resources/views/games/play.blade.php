@@ -15,26 +15,7 @@
         @else
             <div class="mt-8 space-y-4">
                 @foreach ($round->matches as $match)
-                    <article class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
-                        <p class="text-xs font-bold uppercase tracking-[0.18em] text-stone-500">Court {{ $match->court_number }}</p>
-                        @php
-                            $teamA = $match->matchPlayers->where('team.value', 'A');
-                            $teamB = $match->matchPlayers->where('team.value', 'B');
-                        @endphp
-                        <div class="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                            <div class="space-y-1 text-lg font-bold text-stone-950">@foreach ($teamA as $assignment)<p>{{ $assignment->player->name }}</p>@endforeach</div>
-                            <span class="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">VS</span>
-                            <div class="space-y-1 text-right text-lg font-bold text-stone-950">@foreach ($teamB as $assignment)<p>{{ $assignment->player->name }}</p>@endforeach</div>
-                        </div>
-                        @if ($match->status->value === 'completed')
-                            <div class="mt-7 flex items-center justify-between border-t border-stone-100 pt-4">
-                                <span class="text-xs font-bold uppercase tracking-[0.16em] text-stone-500">Final</span>
-                                <span class="text-3xl font-bold tracking-tight text-stone-950">{{ $match->team_a_score }} — {{ $match->team_b_score }}</span>
-                            </div>
-                        @else
-                            <a href="{{ route('games.score.edit', [$tournament, $match]) }}" class="mt-7 flex min-h-12 items-center justify-center rounded-xl bg-[#c7f000] text-sm font-bold text-stone-950">Enter Result</a>
-                        @endif
-                    </article>
+                    <x-games.match-card :match="$match" :tournament="$tournament" />
                 @endforeach
             </div>
 
@@ -51,15 +32,15 @@
             @endif
 
             @if ($round->status->value === 'completed' && $tournament->status->value === 'ongoing')
-                <form method="POST" action="{{ route('games.next', $tournament) }}" class="mt-8">
+                <form method="POST" action="{{ route('games.next', $tournament) }}" x-data="{ submitting: false }" @submit="submitting = true" class="mt-8">
                     @csrf
-                    <button type="submit" class="min-h-13 w-full rounded-xl bg-[#c7f000] px-5 text-base font-bold text-stone-950">Continue to next round</button>
+                    <button type="submit" :disabled="submitting" class="min-h-13 w-full rounded-xl bg-[#c7f000] px-5 text-base font-bold text-stone-950 disabled:cursor-wait disabled:opacity-60"><span x-show="!submitting">Continue to next round</span><span x-show="submitting" x-cloak>Preparing next round…</span></button>
                 </form>
             @elseif ($tournament->status->value === 'completed')
                 <a href="{{ route('games.standings', $tournament) }}" class="mt-8 flex min-h-13 items-center justify-center rounded-xl bg-[#c7f000] px-5 text-base font-bold text-stone-950">View final standings</a>
             @endif
 
-            @include('games.partials.navigation', ['active' => 'play'])
+            <x-games.bottom-navigation :tournament="$tournament" active="play" />
         @endif
     </div>
 @endsection

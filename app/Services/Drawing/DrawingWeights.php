@@ -2,6 +2,12 @@
 
 namespace App\Services\Drawing;
 
+/**
+ * Weighted penalties use integer, un-normalized components:
+ * match/rest imbalance are count spreads, pair penalties count prior
+ * encounters, and consecutive-rest penalties grow with the current streak.
+ * The defaults deliberately make match and rest balance dominant.
+ */
 final readonly class DrawingWeights
 {
     public function __construct(

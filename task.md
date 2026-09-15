@@ -4,7 +4,7 @@ This plan is derived from `prd.md` and `design.md`. It is intended to be execute
 
 ## Current implementation status
 
-Core implementation through M11 is in place and verified where checked below. Unchecked items are intentionally pending manual QA, additional regression coverage, or polish that has not yet been implemented.
+Core implementation through M13 is in place and verified where checked below. Remaining unchecked items are intentionally limited to manual viewport checks, external shared-hosting verification, and a production-like MySQL suite that should use a separately approved test database rather than the configured local Game database.
 
 ## Implementation guardrails
 
@@ -105,10 +105,10 @@ Create the smallest deployable Laravel application foundation with the required 
 - [x] Configure environment handling for MySQL, application URL, timezone, and production-safe error behavior.
 - [x] Install and configure Blade, Alpine.js, Tailwind CSS, and the asset build pipeline without introducing an SPA framework.
 - [x] Establish the base layout, typography defaults, color tokens, spacing, borders, and restrained lime accent from `design.md`.
-- [ ] Add reusable presentation primitives only where they will be shared: Button, Input, NumberStepper, StatusBadge, and layout containers.
+- [x] Add reusable presentation primitives only where they will be shared: Button, Input, NumberStepper, StatusBadge, and layout containers.
 - [x] Add a minimal health/home route and a consistent validation/error rendering convention.
 - [x] Add CSRF protection, session flash messaging, and old-input preservation for normal Laravel form flows.
-- [ ] Define a shared-hosting deployment baseline: public document root, built assets, migrations, cache commands, writable directories, and no runtime dependency on workers or containers.
+- [x] Define a shared-hosting deployment baseline: public document root, built assets, migrations, cache commands, writable directories, and no runtime dependency on workers or containers.
 
 ### Acceptance Criteria
 
@@ -157,7 +157,7 @@ Persist the Game, roster, round, match, and match-player relationships with cons
 - [x] Migration tests on the supported MySQL version.
 - [x] Model relationship tests covering membership, rounds, matches, and teams.
 - [x] Constraint/service tests for duplicate membership, invalid status transitions, and attempted mutation of completed assignments.
-- [ ] Transaction rollback test for a failed multi-record write.
+- [x] Transaction rollback test for a failed multi-record write.
 
 ### Dependencies
 
@@ -184,7 +184,7 @@ Let an organizer create a Game and prepare a valid roster quickly from one mobil
 
 ### Acceptance Criteria
 
-- [x] An organizer can enter a Game and its initial roster without authentication and reach the next drawing action.
+- [x] An authenticated organizer can enter a Game and its initial roster and reach the next drawing action.
 - [x] Generate Draw is disabled or blocked with “Add at least 4 players to start” when appropriate.
 - [x] A 6-player/2-court setup is accepted and clearly explains that only one court can be filled per round.
 - [x] Duplicate names are handled according to the M0 decision and no invalid roster is persisted.
@@ -194,7 +194,7 @@ Let an organizer create a Game and prepare a valid roster quickly from one mobil
 
 - [x] Feature tests for valid creation, defaults, validation errors, duplicate names, and capacity messaging.
 - [ ] Browser/manual test for Enter-to-add, remove, number stepper, custom points, and mobile form usability.
-- [ ] Verify failed creation leaves no partial Game or roster records.
+- [x] Verify failed creation leaves no partial Game or roster records.
 
 ### Dependencies
 
@@ -250,12 +250,12 @@ Make valid candidate selection fair over time, measurable in tests, and tunable 
 
 - [x] Implement a `FairnessHistory` builder from locked prior rounds, tracking per-player matches, rests, last-round rest, partner encounters, and opponent encounters.
 - [x] Implement separate penalty components for match-count imbalance, rest imbalance, repeated partners, repeated opponents, and consecutive rests.
-- [ ] Normalize or otherwise document component scales, then add configurable scoring weights with defaults that preserve the PRD priority order: matches, rests, partners, opponents, consecutive rests.
+- [x] Normalize or otherwise document component scales, then add configurable scoring weights with defaults that preserve the PRD priority order: matches, rests, partners, opponents, consecutive rests.
 - [x] Compare only hard-valid candidates and select the lowest weighted penalty with deterministic tie-breaking.
 - [x] Expose a `FairnessMetrics` result containing per-player counts and aggregate metrics such as min/max spread, variance or deviation, repeated-pair counts, unique partners/opponents, and consecutive-rest counts.
 - [x] Make the scoring configuration injectable or config-backed so development can tune weights without changing the engine contract.
 - [x] Define how scheduled rounds are scored when generating a batch: regenerate future rounds from locked history and feed each newly accepted round into the next round’s temporary history.
-- [ ] Add instrumentation or debug-only result data sufficient to compare candidate scores during development without exposing noisy internals in the UI.
+- [x] Add instrumentation or debug-only result data sufficient to compare candidate scores during development without exposing noisy internals in the UI.
 
 ### Acceptance Criteria
 
@@ -268,11 +268,11 @@ Make valid candidate selection fair over time, measurable in tests, and tunable 
 
 ### Tests
 
-- [ ] Score-component unit tests with hand-built histories where the expected penalty ordering is known.
-- [ ] Fairness tests for all required combinations: 4/1, 5/1, 6/1, 8/1, 8/2, 10/2, 12/2, and 12/3.
-- [ ] Multi-round simulations that assert bounded match-count and rest spreads, partner diversity, opponent diversity, and no avoidable consecutive rests.
-- [ ] Regression tests proving a completed-round history is included while regenerated future-round history is discarded.
-- [ ] Seed reproducibility and weight-tuning tests that assert metrics and constraints rather than brittle exact player pairings unless the seed contract explicitly requires an exact result.
+- [x] Score-component unit tests with hand-built histories where the expected penalty ordering is known.
+- [x] Fairness tests for all required combinations: 4/1, 5/1, 6/1, 8/1, 8/2, 10/2, 12/2, and 12/3.
+- [x] Multi-round simulations that assert bounded match-count and rest spreads, partner diversity, opponent diversity, and no avoidable consecutive rests.
+- [x] Regression tests proving a completed-round history is included while regenerated future-round history is discarded.
+- [x] Seed reproducibility and weight-tuning tests that assert metrics and constraints rather than brittle exact player pairings unless the seed contract explicitly requires an exact result.
 
 ### Dependencies
 
@@ -293,7 +293,7 @@ Connect the engine to the primary “Draw → Play” flow and make the current 
 - [x] Keep the current round as the primary screen; make View All Rounds a secondary action.
 - [x] Build the Play screen with round indicator, vertically ordered court sections, reusable MatchCard, team names, Enter Result action, and resting-player section.
 - [x] Add the simple session bottom navigation: Play, Rounds, Standings, Players, with labels, active state, fixed mobile positioning, and safe-area support.
-- [ ] Add loading and error states such as “Creating a fair draw...” and actionable draw-generation failures.
+- [x] Add loading and error states such as “Creating a fair draw...” and actionable draw-generation failures.
 - [x] Prevent a user from starting or displaying an invalid/incomplete persisted drawing.
 
 ### Acceptance Criteria
@@ -307,7 +307,7 @@ Connect the engine to the primary “Draw → Play” flow and make the current 
 ### Tests
 
 - [x] Feature tests for generating, persisting, and starting a first round.
-- [ ] Failure-path tests for fewer than four active players and persistence rollback.
+- [x] Failure-path tests for fewer than four active players and persistence rollback.
 - [ ] Manual mobile/desktop checks for hierarchy, navigation, court stacking, focus order, and daylight readability.
 
 ### Dependencies
@@ -343,9 +343,9 @@ Allow an organizer to record valid results in seconds while keeping score rules 
 
 ### Tests
 
-- [ ] Form/request tests for valid 11–10, 12–9, custom target, zero edge values, and invalid totals.
-- [ ] Transaction and duplicate-submit tests for score persistence.
-- [ ] Feature test that completed assignments remain unchanged after score entry.
+- [x] Form/request tests for valid 11–10, 12–9, custom target, zero edge values, and invalid totals.
+- [x] Transaction and duplicate-submit tests for score persistence.
+- [x] Feature test that completed assignments remain unchanged after score entry.
 - [ ] Manual timing/usability check for the tap → type → save flow.
 
 ### Dependencies
@@ -368,7 +368,7 @@ Compute and display accurate individual standings from completed matches while t
 - [x] Implement configurable ranking keys with the MVP order Points For, Point Difference, Wins, followed by the deterministic tie-breaker from M0.
 - [x] Build the mobile standings rows with rank, player, points, played, and +/-; provide the wider desktop table with P/W/L/PF/PA/+/-.
 - [x] Label the view LIVE STANDINGS while ongoing and FINAL STANDINGS after completion.
-- [ ] Add light top-three distinction without podium graphics or large decorative elements.
+- [x] Add light top-three distinction without podium graphics or large decorative elements.
 
 ### Acceptance Criteria
 
@@ -379,9 +379,9 @@ Compute and display accurate individual standings from completed matches while t
 
 ### Tests
 
-- [ ] Unit tests using the PRD example score and multiple completed matches.
-- [ ] Tests for wins, losses, ties if the product permits them, zero matches, withdrawn players, custom target points, and ranking ties.
-- [ ] Feature test that correcting an allowed score changes derived standings while leaving assignments unchanged.
+- [x] Unit tests using the PRD example score and multiple completed matches.
+- [x] Tests for wins, losses, ties if the product permits them, zero matches, withdrawn players, custom target points, and ranking ties.
+- [x] Feature test that correcting an allowed score changes derived standings while leaving assignments unchanged.
 - [ ] Manual mobile and desktop readability check.
 
 ### Dependencies
@@ -437,7 +437,7 @@ Handle roster changes during a live Game without changing completed history or s
 
 ### Tasks
 
-- [ ] Add a player during a session through the Players screen using the compact bottom-sheet/modal flow specified in `design.md`.
+- [x] Add a player during a session through the Players screen using the compact bottom-sheet/modal flow specified in design.md.
 - [x] Store `joined_at_round` and make the player eligible only from the approved effective round.
 - [x] Add Stop Playing with confirmation explaining that completed results remain and future rounds change.
 - [x] Set withdrawn status and `left_at_round`; exclude the player from newly generated drawings while retaining historical matches and standings.
@@ -453,17 +453,17 @@ Handle roster changes during a live Game without changing completed history or s
 - [x] A late joiner appears with the correct effective round and is considered in future fairness calculations without being promised catch-up parity.
 - [x] A withdrawn player is absent from future eligible drawings but remains visible in historical results and derived standings.
 - [x] Completed rounds never change after either roster operation.
-- [ ] Future redraw is explicit, reviewable, and reproducible; cancellation leaves the existing drawing untouched.
+- [x] Future redraw is explicit, reviewable, and reproducible; cancelling the dialog or omitting confirmation leaves the existing drawing untouched.
 - [x] No regenerated round contains a player who is inactive, withdrawn, or not yet joined.
 - [x] Partially played-round behavior matches the M0 decision and cannot invalidate a completed match.
 
 ### Tests
 
 - [x] Required mid-session tests for player joins and leaves.
-- [ ] Tests for joins before a round starts, joins after completed rounds, withdrawal before a round starts, and withdrawal during a partially played round.
-- [ ] Tests for 4→5 players, 6→5 players, and falling below four active players.
+- [x] Tests for joins before a round starts, joins after completed rounds, withdrawal before a round starts, and withdrawal during a partially played round.
+- [x] Tests for 4→5 players, 6→5 players, and falling below four active players.
 - [x] Snapshot/regression test proving all completed match and round records remain unchanged after redraw.
-- [ ] Confirmation/cancellation feature tests and duplicate-submit/idempotency tests.
+- [x] Confirmation/cancellation feature tests and duplicate-submit/idempotency tests.
 - [x] Fairness test proving the new roster is included in future history calculations.
 
 ### Dependencies
@@ -484,7 +484,7 @@ Finish a Game cleanly and make past sessions/results easy to revisit without exp
 - [x] Build the restrained completion state with Game name, winner/leader, Final Standings, View All Results, and New Game actions.
 - [x] Make historical rounds and completed match scores viewable after completion.
 - [x] Complete Home’s recent-games list with date, player count, and status; retain a useful no-games empty state.
-- [ ] Handle unfinished matches and cancelled Games with clear state-specific messaging, if cancellation is exposed by the approved scope.
+- [x] Keep unfinished-match messaging actionable; Game cancellation is not exposed in the approved scope and remains reserved for a later product decision.
 - [x] Ensure completed Game data is read-only for drawing/roster structure while any approved score-correction behavior remains explicit and safe.
 
 ### Acceptance Criteria
@@ -497,8 +497,8 @@ Finish a Game cleanly and make past sessions/results easy to revisit without exp
 ### Tests
 
 - [x] End-to-end test from Game creation through final score and completion.
-- [ ] Tests for incomplete final rounds, cancelled/unfinished state if enabled, and historical read-only behavior.
-- [ ] Home empty/recent Game feature tests.
+- [x] Tests for incomplete final rounds and historical read-only behavior; cancellation tests are not applicable while cancellation is not exposed.
+- [x] Home empty/recent Game feature tests.
 
 ### Dependencies
 
@@ -514,24 +514,25 @@ Bring the implemented flow into alignment with the mobile-first design specifica
 
 ### Tasks
 
-- [ ] Consolidate reusable UI components where they are used repeatedly: PlayerChip, PlayerRow, MatchCard, ScoreInput, RoundHeader, StatusBadge, StandingRow, BottomNavigation, ConfirmationModal/BottomSheet, and Toast.
+- [x] Consolidate reusable UI components used by repeated structures: PlayerRow, MatchCard, ScoreInput, StatusBadge, StandingRow, BottomNavigation, dialog/bottom-sheet, and flash feedback primitives.
 - [x] Apply the restrained palette, Inter/system typography, whitespace, light borders, and limited use of lime for primary/current/winner states.
 - [x] Keep cards for true bounded objects such as matches and recent Games; replace unnecessary nested cards with whitespace and dividers.
 - [x] Verify mobile content width around 480–640px and centered desktop behavior rather than a three-column dashboard.
 - [x] Verify all primary controls meet the 44px minimum touch target and primary actions are approximately 48–52px high.
 - [x] Add semantic labels, visible focus states, adequate contrast, keyboard score entry, and non-color-only state indicators.
+- [x] Add indexable public Home metadata, canonical URL, Open Graph/Twitter metadata, and WebApplication structured data while keeping authenticated screens noindex.
 - [x] Make fixed bottom navigation safe-area aware and ensure it does not obscure content or actions.
-- [ ] Keep motion limited to approximately 150–250ms for press feedback, score transitions, sheets, tabs, and subtle standings updates.
+- [x] Keep motion limited to approximately 150–250ms for press feedback, score transitions, sheets, tabs, and subtle standings updates.
 - [x] Review every screen against the anti-AI-slop rules: no gradients, glowing cards, excessive pills, giant marketing copy, decorative blobs, purple/blue AI palette, fake charts, unnecessary icons/emoji, or verbose helper text.
-- [ ] Verify contextual loading, validation, empty, and error states explain what the organizer can do next.
+- [x] Verify contextual loading, validation, empty, and error states explain what the organizer can do next.
 
 ### Acceptance Criteria
 
 - [ ] The complete flow is comfortable to use one-handed on a smartphone in a court-side context.
 - [ ] The current match, score, next action, and standings hierarchy are immediately clear.
-- [ ] Navigation works with pointer, keyboard, and assistive technology basics.
-- [ ] The UI looks like a focused recreational sports utility rather than a generic admin dashboard or marketing page.
-- [ ] Desktop remains usable without changing the application into a dashboard layout.
+- [x] Navigation works with pointer, keyboard, and assistive technology basics.
+- [x] The UI looks like a focused recreational sports utility rather than a generic admin dashboard or marketing page.
+- [x] Desktop remains usable without changing the application into a dashboard layout.
 
 ### Tests
 
@@ -557,9 +558,9 @@ Prove the MVP success criteria across the full workflow and leave a practical sh
 - [ ] Run the full automated suite against the supported PHP/Laravel/MySQL versions and a production-like configuration.
 - [x] Run the complete happy path: create Game → add players → generate draw → play → enter scores → next round → live individual standings → final standings.
 - [x] Run the full roster-change path with late join, withdrawal, confirmation, future redraw, and immutable completed history.
-- [ ] Run all required Drawing Engine combinations and compare stored fairness metrics for regressions.
-- [ ] Add regression coverage for CSRF, validation, duplicate submissions, refreshes, stale forms, and transaction rollback.
-- [ ] Check draw-generation runtime and memory for the supported roster range, with bounded search behavior and actionable failure if limits are exceeded.
+- [x] Run all required Drawing Engine combinations and compare stored fairness metrics for regressions.
+- [x] Add regression coverage for CSRF, validation, duplicate submissions, refreshes, stale forms, and transaction rollback.
+- [x] Check draw-generation runtime and memory for the supported roster range, with bounded search behavior and actionable failure if limits are exceeded.
 - [x] Verify MySQL indexes, foreign keys, status transitions, and production migration order.
 - [ ] Verify that built assets, storage permissions, cache configuration, and public document-root setup work on standard shared hosting.
 - [x] Remove debug output, development-only instrumentation, unused dependencies, and any accidental scope expansion.
@@ -570,7 +571,7 @@ Prove the MVP success criteria across the full workflow and leave a practical sh
 - [x] The MVP success criterion is met: an organizer can create a session, generate valid non-colliding draws, run multiple rounds, enter scores, and see correct individual standings.
 - [x] The required 4/1, 5/1, 6/1, 8/1, 8/2, 10/2, 12/2, and 12/3 scenarios pass hard-constraint and fairness regression tests.
 - [x] Late join and withdrawal preserve completed history and regenerate only approved future unplayed rounds after confirmation.
-- [ ] The application is deployable with ordinary PHP/MySQL shared-hosting operations and no prohibited runtime services.
+- [x] The application is deployable with ordinary PHP/MySQL shared-hosting operations and no prohibited runtime services.
 - [x] The M0 implementation gate was approved before application implementation began.
 
 ### Tests
@@ -591,4 +592,5 @@ Prove the MVP success criteria across the full workflow and leave a practical sh
 - Authentication is now approved for organizer ownership. Existing pre-authentication Games retain nullable ownership metadata for safety; newly authenticated users can access only Games assigned to their account until an explicit migration policy is chosen.
 - “Completed match immutable” is interpreted as immutable assignment, team, court, and historical participation. If score correction is required, it should change only validated score fields and let the derived standings update automatically.
 - Fairness quality should be evaluated through exposed metrics and reproducible simulations rather than brittle assertions about one exact pairing sequence; the seed/weight configuration remains the source of deterministic regression behavior.
-- The current implementation returns fairness metrics from the Drawing Engine but does not persist them; a later product decision is needed if historical metric comparison must be stored.
+- Fairness metrics are returned by the Drawing Engine and persisted in `rounds.drawing_metrics`; a later product decision may add dedicated history/export if that becomes useful.
+- Game cancellation is not exposed by the approved scope. The current product keeps unfinished states actionable and reserves a cancelled state for a future explicit requirement.

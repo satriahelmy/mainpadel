@@ -19,6 +19,7 @@ class Round extends Model
         'draw_seed',
         'generated_at',
         'locked_at',
+        'drawing_metrics',
     ];
 
     protected function casts(): array
@@ -29,6 +30,7 @@ class Round extends Model
             'draw_seed' => 'integer',
             'generated_at' => 'datetime',
             'locked_at' => 'datetime',
+            'drawing_metrics' => 'array',
         ];
     }
 

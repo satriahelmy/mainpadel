@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="py-6 pb-28 sm:py-10 sm:pb-10">
+    <div x-data="{ showAddPlayer: false, showRedraw: false, submitting: false }" @keydown.escape.window="showAddPlayer = false; showRedraw = false" class="py-6 pb-28 sm:py-10 sm:pb-10">
         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">Players</p>
         <div class="mt-2 flex items-end justify-between gap-4">
             <h1 class="text-3xl font-bold tracking-tight text-stone-950">{{ $tournament->name }}</h1>
@@ -11,31 +11,22 @@
         <div class="mt-8 divide-y divide-stone-200 border-y border-stone-200">
             @foreach ($participation as $row)
                 @php($membership = $row['membership'])
-                <div class="flex items-center gap-4 py-4">
-                    <div class="min-w-0 flex-1">
-                        <p class="truncate font-bold text-stone-950">{{ $membership->player->name }}</p>
-                        <p class="mt-1 text-sm text-stone-500">{{ $row['played'] }} matches · {{ $row['rests'] }} rests{{ $membership->status->value === 'withdrawn' ? ' · withdrawn' : '' }}</p>
-                    </div>
+                <x-games.player-row :membership="$membership" :played="$row['played']" :rests="$row['rests']">
                     @if ($membership->status->value === 'active' && $tournament->status->value !== 'completed')
                         <form method="POST" action="{{ route('games.players.withdraw', [$tournament, $membership]) }}" onsubmit="return confirm('Stop playing? Completed results stay saved and future rounds will change.')">
                             @csrf
                             <button type="submit" class="min-h-11 px-2 text-sm font-bold text-stone-500 underline decoration-stone-300 underline-offset-4 hover:text-red-700">Stop playing</button>
                         </form>
                     @endif
-                </div>
+                </x-games.player-row>
             @endforeach
         </div>
 
         @if ($tournament->status->value !== 'completed')
-            <section class="mt-8 rounded-2xl border border-stone-200 bg-white p-5">
+            <section class="mt-8 border-t border-stone-200 pt-6">
                 <h2 class="text-lg font-bold text-stone-950">Add player</h2>
                 <p class="mt-1 text-sm leading-6 text-stone-500">The player joins from the next unplayed round.</p>
-                <form method="POST" action="{{ route('games.players.store', $tournament) }}" class="mt-4 flex gap-2">
-                    @csrf
-                    <label for="new-player-name" class="sr-only">Player name</label>
-                    <input id="new-player-name" name="name" value="{{ old('name') }}" required maxlength="100" class="min-h-12 min-w-0 flex-1 rounded-xl border border-stone-300 px-4" placeholder="Player name">
-                    <button type="submit" class="min-h-12 rounded-xl bg-[#c7f000] px-4 text-sm font-bold text-stone-950">Add</button>
-                </form>
+                <button type="button" @click="showAddPlayer = true" class="mt-4 min-h-12 rounded-xl bg-[#c7f000] px-5 text-sm font-bold text-stone-950">+ Add player</button>
             </section>
         @endif
 
@@ -43,13 +34,37 @@
             <section class="mt-6 border-t border-stone-200 pt-6">
                 <h2 class="text-lg font-bold text-stone-950">Roster changed</h2>
                 <p class="mt-2 text-sm leading-6 text-stone-600">Future rounds {{ $redrawSummary['from'] }}–{{ $redrawSummary['to'] }} will be regenerated. Completed rounds will not change.</p>
-                <form method="POST" action="{{ route('games.redraw', $tournament) }}" class="mt-4">
-                    @csrf
-                    <button type="submit" class="min-h-12 w-full rounded-xl bg-[#c7f000] px-5 text-sm font-bold text-stone-950">Redraw future rounds</button>
-                </form>
+                <button type="button" @click="showRedraw = true" class="mt-4 min-h-12 w-full rounded-xl bg-[#c7f000] px-5 text-sm font-bold text-stone-950">Review future redraw</button>
             </section>
         @endif
 
-        @include('games.partials.navigation', ['active' => 'players'])
+        <x-games.bottom-navigation :tournament="$tournament" active="players" />
+
+        <x-ui.dialog state="showAddPlayer" kicker="Roster" title="Add player" labelledby="add-player-title" close-action="showAddPlayer = false" close-label="Close add player dialog">
+                <p class="mt-3 text-sm leading-6 text-stone-600">This player joins from round {{ $tournament->rounds->firstWhere('status.value', 'scheduled')?->round_number ?? (($tournament->rounds->max('round_number') ?? 0) + 1) }}. Completed results will not change.</p>
+                <form method="POST" action="{{ route('games.players.store', $tournament) }}" @submit="submitting = true" class="mt-5">
+                    @csrf
+                    <label for="new-player-name" class="block text-sm font-semibold text-stone-800">Player name</label>
+                    <input id="new-player-name" name="name" value="{{ old('name') }}" required maxlength="100" autofocus class="mt-2 min-h-12 w-full rounded-xl border border-stone-300 bg-white px-4" placeholder="Player name">
+                    <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button type="button" @click="showAddPlayer = false" class="min-h-12 rounded-xl border border-stone-300 bg-white px-5 text-sm font-bold text-stone-800">Cancel</button>
+                        <button type="submit" :disabled="submitting" class="min-h-12 rounded-xl bg-[#c7f000] px-5 text-sm font-bold text-stone-950 disabled:cursor-wait disabled:opacity-60"><span x-show="!submitting">Add player</span><span x-show="submitting" x-cloak>Adding…</span></button>
+                    </div>
+                </form>
+        </x-ui.dialog>
+
+        @if ($redrawSummary && $redrawSummary['has_future'])
+            <x-ui.dialog state="showRedraw" kicker="Confirm change" title="Redraw future rounds?" labelledby="redraw-title" close-action="showRedraw = false" close-label="Close redraw dialog">
+                    <p class="mt-3 text-sm leading-6 text-stone-600">Rounds {{ $redrawSummary['from'] }}–{{ $redrawSummary['to'] }} will be regenerated. Completed rounds remain unchanged. This cannot be undone after the new drawing is saved.</p>
+                    <form method="POST" action="{{ route('games.redraw', $tournament) }}" @submit="submitting = true" class="mt-5">
+                        @csrf
+                        <input type="hidden" name="confirmed" value="1">
+                        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                            <button type="button" @click="showRedraw = false" class="min-h-12 rounded-xl border border-stone-300 bg-white px-5 text-sm font-bold text-stone-800">Cancel</button>
+                            <button type="submit" :disabled="submitting" class="min-h-12 rounded-xl bg-[#c7f000] px-5 text-sm font-bold text-stone-950 disabled:cursor-wait disabled:opacity-60"><span x-show="!submitting">Redraw future rounds</span><span x-show="submitting" x-cloak>Redrawing…</span></button>
+                        </div>
+                    </form>
+            </x-ui.dialog>
+        @endif
     </div>
 @endsection

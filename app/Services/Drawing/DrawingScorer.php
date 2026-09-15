@@ -71,9 +71,13 @@ final class DrawingScorer
             'match_count_min' => min($matchCounts),
             'match_count_max' => max($matchCounts),
             'match_count_spread' => $matchImbalance,
+            'match_count_mean' => $this->mean($matchCounts),
+            'match_count_variance' => $this->variance($matchCounts),
             'rest_min' => min($restCounts),
             'rest_max' => max($restCounts),
             'rest_spread' => $restImbalance,
+            'rest_mean' => $this->mean($restCounts),
+            'rest_variance' => $this->variance($restCounts),
             'repeated_partnerships' => $repeatedPartner,
             'repeated_opponents' => $repeatedOpponent,
             'consecutive_rests' => $consecutiveRest,
@@ -146,5 +150,17 @@ final class DrawingScorer
     private function spread(array $values): int
     {
         return max($values) - min($values);
+    }
+
+    private function mean(array $values): float
+    {
+        return array_sum($values) / count($values);
+    }
+
+    private function variance(array $values): float
+    {
+        $mean = $this->mean($values);
+
+        return array_sum(array_map(static fn (int $value): float => ($value - $mean) ** 2, $values)) / count($values);
     }
 }

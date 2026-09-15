@@ -134,8 +134,9 @@ The application is designed for ordinary PHP/MySQL hosting:
 4. Build assets during deployment with `npm run build`, or upload the generated `public/build` directory.
 5. Configure production MySQL credentials and set `APP_DEBUG=false`.
 6. Run `php artisan migrate --force`.
-7. Ensure `storage` and `bootstrap/cache` are writable by the web process.
-8. Use file sessions, file cache, and synchronous jobs unless the hosting environment explicitly supports another option.
+7. Cache the production configuration and Blade views with `php artisan config:cache` and `php artisan view:cache`.
+8. Ensure `storage` and `bootstrap/cache` are writable by the web process.
+9. Use file sessions, file cache, and synchronous jobs unless the hosting environment explicitly supports another option.
 
 No queue worker, WebSocket server, Redis instance, or container runtime is required.
 
@@ -154,7 +155,7 @@ No queue worker, WebSocket server, Redis instance, or container runtime is requi
 - Authentication currently covers registration, sign in, and sign out. Password reset, email verification, social login, roles, and admin features are not included.
 - Auto rounds use the configured bounded heuristic documented in `config/mainpadel.php`.
 - Completed match assignments and rounds are immutable. Score corrections, where allowed, update score fields and derived standings only.
-- Fairness metrics are returned by the Drawing Engine but are not currently persisted as historical records.
+- Fairness metrics are returned by the Drawing Engine and persisted on each round in the `rounds.drawing_metrics` JSON column for regression inspection.
 - Games created before user ownership was introduced may have a null `user_id` and require an explicit data migration policy before they can be reopened.
 
 ## Source of truth

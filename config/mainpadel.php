@@ -23,7 +23,7 @@ return [
 
     'drawing' => [
         'candidate_limit' => 1500,
-        'search_restart_limit' => 100,
+        'diagnostics' => (bool) env('MAINPADEL_DRAWING_DIAGNOSTICS', false),
         'weights' => [
             'match_count_imbalance' => 1000,
             'rest_imbalance' => 500,

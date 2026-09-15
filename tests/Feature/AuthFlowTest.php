@@ -55,6 +55,27 @@ class AuthFlowTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_authentication_screens_render_for_guests(): void
+    {
+        $this->get(route('register'))->assertOk()->assertSee('Create account');
+        $this->get(route('login'))->assertOk()->assertSee('Sign in');
+    }
+
+    public function test_guests_are_redirected_from_game_creation(): void
+    {
+        $this->get(route('games.create'))
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_mutating_forms_include_csrf_tokens(): void
+    {
+        $this->get(route('login'))->assertOk()->assertSee('name="_token"', false);
+        $this->get(route('register'))->assertOk()->assertSee('name="_token"', false);
+
+        $user = User::factory()->create();
+        $this->actingAs($user)->get(route('games.create'))->assertOk()->assertSee('name="_token"', false);
+    }
+
     public function test_games_are_visible_only_to_their_owner(): void
     {
         $owner = User::factory()->create();
@@ -79,5 +100,24 @@ class AuthFlowTest extends TestCase
         $this->actingAs($owner)
             ->get(route('games.show', $tournament))
             ->assertOk();
+    }
+
+    public function test_recent_games_are_scoped_to_the_authenticated_user(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $this->actingAs($owner)->post(route('games.store'), [
+            'name' => 'Owner Recent Game',
+            'played_at' => '2026-09-15',
+            'players' => ['A', 'B', 'C', 'D'],
+            'number_of_courts' => 1,
+            'target_points' => 21,
+            'round_mode' => 'custom',
+            'number_of_rounds' => 1,
+        ]);
+
+        $this->actingAs($owner)->get(route('home'))->assertOk()->assertSee('Owner Recent Game');
+        $this->actingAs($otherUser)->get(route('home'))->assertOk()->assertDontSee('Owner Recent Game');
     }
 }

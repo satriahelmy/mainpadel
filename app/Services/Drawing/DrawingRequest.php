@@ -13,6 +13,7 @@ final readonly class DrawingRequest
         public int $seed = 1,
         public ?DrawingWeights $weights = null,
         public int $candidateLimit = 0,
+        public bool $includeDiagnostics = false,
     ) {
         $this->activePlayerIds = array_values(array_unique(array_map('intval', $activePlayerIds)));
     }

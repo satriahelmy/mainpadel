@@ -11,6 +11,7 @@ final readonly class DrawingResult
         array $restingPlayerIds,
         public FairnessScore $score,
         public int $seed,
+        public array $diagnostics = [],
     ) {
         $this->restingPlayerIds = array_values(array_map('intval', $restingPlayerIds));
     }

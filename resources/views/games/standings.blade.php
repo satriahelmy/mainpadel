@@ -7,17 +7,7 @@
 
         <div class="mt-8 divide-y divide-stone-200 border-y border-stone-200">
             @forelse ($standings as $standing)
-                <div class="flex items-center gap-4 py-4">
-                    <span class="w-7 text-center text-lg font-bold text-stone-400">{{ $standing['rank'] }}</span>
-                    <div class="min-w-0 flex-1">
-                        <p class="truncate font-bold text-stone-950">{{ $standing['name'] }}</p>
-                        <p class="mt-1 text-sm text-stone-500">{{ $standing['played'] }} played · {{ $standing['point_difference'] >= 0 ? '+' : '' }}{{ $standing['point_difference'] }}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-2xl font-bold tracking-tight text-stone-950">{{ $standing['points'] }}</p>
-                        <p class="text-xs font-bold uppercase tracking-[0.12em] text-stone-500">points</p>
-                    </div>
-                </div>
+                <x-games.standing-row :standing="$standing" :class="$standing['rank'] <= 3 ? 'bg-lime-50' : ''" />
             @empty
                 <p class="py-10 text-stone-600">Standings will appear after a result is saved.</p>
             @endforelse
@@ -36,6 +26,6 @@
             </table>
         </div>
 
-        @include('games.partials.navigation', ['active' => 'standings'])
+        <x-games.bottom-navigation :tournament="$tournament" active="standings" />
     </div>
 @endsection

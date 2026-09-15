@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ConfirmRedrawRequest;
 use App\Http\Requests\StorePlayerRequest;
 use App\Models\Tournament;
 use App\Models\TournamentPlayer;
@@ -59,7 +60,7 @@ class PlayersController extends Controller
             ->with('redraw_summary', $this->drawingService->redrawSummary($tournament));
     }
 
-    public function redraw(Tournament $tournament): RedirectResponse
+    public function redraw(ConfirmRedrawRequest $request, Tournament $tournament): RedirectResponse
     {
         try {
             $round = $this->drawingService->redrawFuture($tournament);

@@ -10,13 +10,11 @@
             @csrf
 
             <div>
-                <label for="email" class="block text-sm font-semibold text-stone-800">Email</label>
-                <input id="email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" required autofocus class="mt-2 min-h-12 w-full rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-950 placeholder:text-stone-400">
+                <x-ui.input label="Email" id="email" name="email" type="email" autocomplete="email" required autofocus />
             </div>
 
             <div>
-                <label for="password" class="block text-sm font-semibold text-stone-800">Password</label>
-                <input id="password" name="password" type="password" autocomplete="current-password" required class="mt-2 min-h-12 w-full rounded-xl border border-stone-300 bg-white px-4 text-base text-stone-950 placeholder:text-stone-400">
+                <x-ui.input label="Password" id="password" name="password" type="password" autocomplete="current-password" required />
             </div>
 
             <label class="flex min-h-11 items-center gap-3 text-sm text-stone-700">
@@ -24,7 +22,7 @@
                 Remember me
             </label>
 
-            <button type="submit" class="min-h-13 w-full rounded-xl bg-[#c7f000] px-5 text-base font-bold text-stone-950 transition hover:bg-[#b8df00]">Sign in</button>
+            <x-ui.button type="submit" class="min-h-13 w-full text-base">Sign in</x-ui.button>
         </form>
 
         <p class="mt-6 text-center text-sm text-stone-600">New to MainPadel? <a href="{{ route('register') }}" class="font-bold text-stone-950 underline underline-offset-4">Create an account</a></p>

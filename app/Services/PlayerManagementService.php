@@ -45,6 +45,11 @@ final class PlayerManagementService
     {
         return DB::transaction(function () use ($tournament, $membership): TournamentPlayer {
             $lockedTournament = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
+
+            if (in_array($lockedTournament->status, [TournamentStatus::Completed, TournamentStatus::Cancelled], true)) {
+                throw new \InvalidArgumentException('Players cannot be changed after a Game is complete.');
+            }
+
             $lockedMembership = $lockedTournament->tournamentPlayers()->with('player')->findOrFail($membership->id);
 
             if ($lockedMembership->status !== TournamentPlayerStatus::Active) {

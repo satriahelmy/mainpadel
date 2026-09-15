@@ -42,9 +42,7 @@
             </header>
 
             @if (session('success'))
-                <div class="mb-5 rounded-xl border border-lime-200 bg-lime-100 px-4 py-3 text-sm font-medium text-stone-900" role="status">
-                    {{ session('success') }}
-                </div>
+                <x-ui.flash :message="session('success')" />
             @endif
 
             @if ($errors->any())

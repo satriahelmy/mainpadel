@@ -54,7 +54,7 @@
                 <div>
                     <label for="number_of_courts" class="block text-sm font-semibold text-stone-800">Courts</label>
                     <div class="mt-2 flex items-center gap-3">
-                        <input id="number_of_courts" type="number" min="1" max="20" name="number_of_courts" x-model.number="courts" required class="min-h-12 w-full rounded-xl border border-stone-300 bg-white px-4 text-center text-lg font-bold text-stone-950">
+                        <x-ui.number-stepper id="number_of_courts" name="number_of_courts" :value="(int) old('number_of_courts', 1)" min="1" max="20" x-model.number="courts" required />
                         <p x-show="validPlayerCount() >= 4 && courts > Math.floor(validPlayerCount() / 4)" x-cloak class="mt-2 text-sm leading-6 text-stone-600" x-text="validPlayerCount() + ' players can fill ' + Math.floor(validPlayerCount() / 4) + ' court' + (Math.floor(validPlayerCount() / 4) === 1 ? '' : 's') + ' per round.'"></p>
                     </div>
                 </div>
