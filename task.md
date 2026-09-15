@@ -440,6 +440,7 @@ Handle roster changes during a live Game without changing completed history or s
 - [x] Add a player during a session through the Players screen using the compact bottom-sheet/modal flow specified in design.md.
 - [x] Store `joined_at_round` and make the player eligible only from the approved effective round.
 - [x] Add Stop Playing with confirmation explaining that completed results remain and future rounds change.
+- [x] Add a temporary Pause/Resume player action that changes eligibility only from the next unplayed round and keeps the player active for historical standings.
 - [x] Set withdrawn status and `left_at_round`; exclude the player from newly generated drawings while retaining historical matches and standings.
 - [x] Calculate the exact locked/unplayed range in the redraw confirmation, for example “Rounds 1–3 will not change; Rounds 4–7 will be regenerated.”
 - [x] Require explicit Redraw Future Rounds confirmation; never silently replace an existing future drawing.
@@ -455,6 +456,7 @@ Handle roster changes during a live Game without changing completed history or s
 - [x] Completed rounds never change after either roster operation.
 - [x] Future redraw is explicit, reviewable, and reproducible; cancelling the dialog or omitting confirmation leaves the existing drawing untouched.
 - [x] No regenerated round contains a player who is inactive, withdrawn, or not yet joined.
+- [x] A temporarily unavailable player is excluded from regenerated future rounds, can be resumed later, and is not counted as resting during the absence interval.
 - [x] Partially played-round behavior matches the M0 decision and cannot invalidate a completed match.
 
 ### Tests
@@ -465,6 +467,7 @@ Handle roster changes during a live Game without changing completed history or s
 - [x] Snapshot/regression test proving all completed match and round records remain unchanged after redraw.
 - [x] Confirmation/cancellation feature tests and duplicate-submit/idempotency tests.
 - [x] Fairness test proving the new roster is included in future history calculations.
+- [x] Tests for temporary unavailability before a round, during a partial round, resumption, and repeated pause/resume intervals.
 
 ### Dependencies
 

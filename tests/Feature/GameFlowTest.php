@@ -209,7 +209,32 @@ class GameFlowTest extends TestCase
         $this->get(route('games.rounds', $tournament))->assertOk()->assertSee('Round 1');
         $this->get(route('games.standings', $tournament))->assertOk()->assertSee('Live standings');
         $this->get(route('games.players', $tournament))->assertOk()->assertSee('Players');
-        $this->get(route('games.score.edit', [$tournament, $match]))->assertOk()->assertSee('Save Result');
+        $this->get(route('games.score.edit', [$tournament, $match]))
+            ->assertOk()
+            ->assertSee('Save Result')
+            ->assertSee('Game navigation');
+    }
+
+    public function test_standings_are_accessible_before_the_game_is_started(): void
+    {
+        $this->post(route('games.store'), $this->gameData([
+            'round_mode' => 'custom',
+            'number_of_rounds' => 2,
+        ]));
+
+        $tournament = Tournament::query()->firstOrFail();
+
+        $this->get(route('games.standings', $tournament))
+            ->assertOk()
+            ->assertSee('Live standings')
+            ->assertSee('Helmy')
+            ->assertSee('Andi')
+            ->assertSee('0');
+
+        $this->get(route('games.draw', $tournament))
+            ->assertOk()
+            ->assertSee('View live standings')
+            ->assertSee('Game navigation');
     }
 
     private function gameData(array $overrides = []): array

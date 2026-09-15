@@ -195,7 +195,7 @@ final class TournamentDrawingService
     public function activePlayerIds(Tournament $tournament, int $roundNumber): array
     {
         return $tournament->tournamentPlayers()
-            ->with('player')
+            ->with(['player', 'absences'])
             ->get()
             ->filter(function ($membership) use ($roundNumber): bool {
                 if ($membership->status === TournamentPlayerStatus::Withdrawn && $membership->left_at_round === null) {
@@ -206,7 +206,11 @@ final class TournamentDrawingService
                     return false;
                 }
 
-                return $membership->left_at_round === null || $membership->left_at_round > $roundNumber;
+                if ($membership->left_at_round !== null && $membership->left_at_round <= $roundNumber) {
+                    return false;
+                }
+
+                return ! $membership->isUnavailableDuringRound($roundNumber);
             })
             ->pluck('player_id')
             ->map(static fn ($playerId): int => (int) $playerId)

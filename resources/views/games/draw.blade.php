@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="py-6 sm:py-10">
+    <div class="py-6 pb-28 sm:py-10 sm:pb-10">
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">Game setup</p>
@@ -58,8 +58,11 @@
                 <div class="mt-4 flex flex-col items-center gap-2 text-sm font-bold text-stone-600 sm:flex-row sm:justify-center sm:gap-5">
                     <a href="{{ route('games.rounds', $tournament) }}" class="min-h-11 py-3 hover:text-stone-950">View all rounds</a>
                     <a href="{{ route('games.show', $tournament) }}" class="min-h-11 py-3 hover:text-stone-950">View current game</a>
+                    <a href="{{ route('games.standings', $tournament) }}" class="min-h-11 py-3 hover:text-stone-950">View live standings</a>
                 </div>
             </section>
         @endif
+
+        <x-games.bottom-navigation :tournament="$tournament" active="play" />
     </div>
 @endsection

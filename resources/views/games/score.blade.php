@@ -5,7 +5,7 @@
         $teamA = $match->matchPlayers->where('team.value', 'A');
         $teamB = $match->matchPlayers->where('team.value', 'B');
     @endphp
-    <div class="py-6 sm:py-10">
+    <div class="py-6 pb-28 sm:py-10 sm:pb-10">
         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">Court {{ $match->court_number }} · Round {{ $match->round->round_number }}</p>
         <h1 class="mt-2 text-3xl font-bold tracking-tight text-stone-950">Enter result</h1>
         <p class="mt-2 text-sm text-stone-500">Scores must total {{ $tournament->target_points }} points. You can correct a saved result without changing the draw.</p>
@@ -22,5 +22,7 @@
             @error('team_b_score')<p class="mt-4 text-sm font-semibold text-red-700" role="alert">{{ $message }}</p>@enderror
             <button type="submit" :disabled="submitting || scoreA === '' || scoreB === '' || Number(scoreA) + Number(scoreB) !== target" class="mt-8 min-h-13 w-full rounded-xl bg-[#c7f000] px-5 text-base font-bold text-stone-950 disabled:cursor-wait disabled:bg-stone-200 disabled:text-stone-500"><span x-show="!submitting">{{ $match->status->value === 'completed' ? 'Update Result' : 'Save Result' }}</span><span x-show="submitting" x-cloak>Saving…</span></button>
         </form>
+
+        <x-games.bottom-navigation :tournament="$tournament" active="play" />
     </div>
 @endsection

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\TournamentPlayerStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TournamentPlayer extends Model
 {
@@ -33,5 +34,22 @@ class TournamentPlayer extends Model
     public function player(): BelongsTo
     {
         return $this->belongsTo(Player::class);
+    }
+
+    public function absences(): HasMany
+    {
+        return $this->hasMany(TournamentPlayerAbsence::class);
+    }
+
+    public function isUnavailableDuringRound(int $roundNumber): bool
+    {
+        return $this->absences->contains(
+            fn (TournamentPlayerAbsence $absence): bool => $absence->coversRound($roundNumber),
+        );
+    }
+
+    public function hasOpenAbsence(): bool
+    {
+        return $this->absences->contains(fn (TournamentPlayerAbsence $absence): bool => $absence->available_again_round === null);
     }
 }

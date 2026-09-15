@@ -7,6 +7,7 @@ use App\Enums\TournamentStatus;
 use App\Models\Player;
 use App\Models\Tournament;
 use App\Models\TournamentPlayer;
+use App\Models\TournamentPlayerAbsence;
 use Illuminate\Support\Facades\DB;
 
 final class PlayerManagementService
@@ -66,6 +67,65 @@ final class PlayerManagementService
         });
     }
 
+    public function markUnavailable(Tournament $tournament, TournamentPlayer $membership): TournamentPlayer
+    {
+        return DB::transaction(function () use ($tournament, $membership): TournamentPlayer {
+            $lockedTournament = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
+            $this->assertRosterCanChange($lockedTournament);
+
+            $lockedMembership = $lockedTournament->tournamentPlayers()
+                ->with('player')
+                ->findOrFail($membership->id);
+
+            if ($lockedMembership->status !== TournamentPlayerStatus::Active) {
+                throw new \InvalidArgumentException('This player is no longer active in the Game.');
+            }
+
+            $lockedMembership->load('absences');
+            if ($lockedMembership->hasOpenAbsence()) {
+                throw new \InvalidArgumentException('This player is already marked unavailable.');
+            }
+
+            $lockedMembership->absences()->create([
+                'unavailable_from_round' => $this->effectiveNextRound($lockedTournament),
+            ]);
+
+            return $lockedMembership->fresh(['player', 'absences']);
+        });
+    }
+
+    public function markAvailable(Tournament $tournament, TournamentPlayer $membership): TournamentPlayer
+    {
+        return DB::transaction(function () use ($tournament, $membership): TournamentPlayer {
+            $lockedTournament = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
+            $this->assertRosterCanChange($lockedTournament);
+
+            $lockedMembership = $lockedTournament->tournamentPlayers()
+                ->with('player')
+                ->findOrFail($membership->id);
+
+            if ($lockedMembership->status !== TournamentPlayerStatus::Active) {
+                throw new \InvalidArgumentException('This player is no longer active in the Game.');
+            }
+
+            $lockedMembership->load(['absences' => fn ($query) => $query->whereNull('available_again_round')->latest('unavailable_from_round')]);
+            $absence = $lockedMembership->absences->first();
+
+            if (! $absence instanceof TournamentPlayerAbsence) {
+                throw new \InvalidArgumentException('This player is already available.');
+            }
+
+            $availableAgainRound = $this->effectiveNextRound($lockedTournament);
+            if ($availableAgainRound <= $absence->unavailable_from_round) {
+                $absence->delete();
+            } else {
+                $absence->update(['available_again_round' => $availableAgainRound]);
+            }
+
+            return $lockedMembership->fresh(['player', 'absences']);
+        });
+    }
+
     public function effectiveNextRound(Tournament $tournament): int
     {
         $ongoingRound = $tournament->rounds()->where('status', 'ongoing')->orderByDesc('round_number')->first();
@@ -77,5 +137,12 @@ final class PlayerManagementService
         $scheduledRound = $tournament->rounds()->where('status', 'scheduled')->orderBy('round_number')->first();
 
         return $scheduledRound?->round_number ?? (($tournament->rounds()->max('round_number') ?? 0) + 1);
+    }
+
+    private function assertRosterCanChange(Tournament $tournament): void
+    {
+        if (in_array($tournament->status, [TournamentStatus::Completed, TournamentStatus::Cancelled], true)) {
+            throw new \InvalidArgumentException('Players cannot be changed after a Game is complete.');
+        }
     }
 }

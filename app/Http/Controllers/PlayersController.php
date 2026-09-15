@@ -21,7 +21,7 @@ class PlayersController extends Controller
 
     public function index(Tournament $tournament): View
     {
-        $tournament->load(['tournamentPlayers.player', 'rounds.matches.matchPlayers']);
+        $tournament->load(['tournamentPlayers.player', 'tournamentPlayers.absences', 'rounds.matches.matchPlayers']);
         $participation = $this->participation($tournament);
         $redrawSummary = session('redraw_summary');
 
@@ -60,6 +60,40 @@ class PlayersController extends Controller
             ->with('redraw_summary', $this->drawingService->redrawSummary($tournament));
     }
 
+    public function markUnavailable(Tournament $tournament, TournamentPlayer $membership): RedirectResponse
+    {
+        abort_unless($membership->tournament_id === $tournament->id, 404);
+
+        try {
+            $this->playerService->markUnavailable($tournament, $membership);
+        } catch (\InvalidArgumentException $exception) {
+            return back()->withErrors(['player' => $exception->getMessage()]);
+        }
+
+        $tournament->refresh();
+
+        return redirect()->route('games.players', $tournament)
+            ->with('success', 'Player marked unavailable from the next unplayed round. Review the future redraw.')
+            ->with('redraw_summary', $this->drawingService->redrawSummary($tournament));
+    }
+
+    public function markAvailable(Tournament $tournament, TournamentPlayer $membership): RedirectResponse
+    {
+        abort_unless($membership->tournament_id === $tournament->id, 404);
+
+        try {
+            $this->playerService->markAvailable($tournament, $membership);
+        } catch (\InvalidArgumentException $exception) {
+            return back()->withErrors(['player' => $exception->getMessage()]);
+        }
+
+        $tournament->refresh();
+
+        return redirect()->route('games.players', $tournament)
+            ->with('success', 'Player will be available from the next unplayed round. Review the future redraw.')
+            ->with('redraw_summary', $this->drawingService->redrawSummary($tournament));
+    }
+
     public function redraw(ConfirmRedrawRequest $request, Tournament $tournament): RedirectResponse
     {
         try {
@@ -83,7 +117,9 @@ class PlayersController extends Controller
                 $roundPlayerIds = $round->matches->flatMap(fn ($match) => $match->matchPlayers->pluck('player_id'))->all();
                 if (in_array($membership->player_id, $roundPlayerIds, true)) {
                     $played++;
-                } elseif ($membership->joined_at_round <= $round->round_number && ($membership->left_at_round === null || $membership->left_at_round > $round->round_number)) {
+                } elseif ($membership->joined_at_round <= $round->round_number
+                    && ($membership->left_at_round === null || $membership->left_at_round > $round->round_number)
+                    && ! $membership->isUnavailableDuringRound($round->round_number)) {
                     $rests++;
                 }
             }

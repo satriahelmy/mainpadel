@@ -11,12 +11,25 @@
         <div class="mt-8 divide-y divide-stone-200 border-y border-stone-200">
             @foreach ($participation as $row)
                 @php($membership = $row['membership'])
-                <x-games.player-row :membership="$membership" :played="$row['played']" :rests="$row['rests']">
+                <x-games.player-row :membership="$membership" :played="$row['played']" :rests="$row['rests']" :unavailable="$membership->hasOpenAbsence()">
                     @if ($membership->status->value === 'active' && $tournament->status->value !== 'completed')
-                        <form method="POST" action="{{ route('games.players.withdraw', [$tournament, $membership]) }}" onsubmit="return confirm('Stop playing? Completed results stay saved and future rounds will change.')">
-                            @csrf
-                            <button type="submit" class="min-h-11 px-2 text-sm font-bold text-stone-500 underline decoration-stone-300 underline-offset-4 hover:text-red-700">Stop playing</button>
-                        </form>
+                        <div class="flex flex-wrap justify-end gap-2">
+                            @if ($membership->hasOpenAbsence())
+                                <form method="POST" action="{{ route('games.players.available', [$tournament, $membership]) }}" onsubmit="return confirm('Make this player available from the next unplayed round? Future rounds will need a redraw.')">
+                                    @csrf
+                                    <button type="submit" class="min-h-11 px-2 text-sm font-bold text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-950">Resume</button>
+                                </form>
+                            @else
+                                <form method="POST" action="{{ route('games.players.unavailable', [$tournament, $membership]) }}" onsubmit="return confirm('Mark this player unavailable from the next unplayed round? The current locked round will not change.')">
+                                    @csrf
+                                    <button type="submit" class="min-h-11 px-2 text-sm font-bold text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-950">Pause</button>
+                                </form>
+                            @endif
+                            <form method="POST" action="{{ route('games.players.withdraw', [$tournament, $membership]) }}" onsubmit="return confirm('Stop playing permanently? Completed results stay saved and future rounds will change.')">
+                                @csrf
+                                <button type="submit" class="min-h-11 px-2 text-sm font-bold text-stone-500 underline decoration-stone-300 underline-offset-4 hover:text-red-700">Stop playing</button>
+                            </form>
+                        </div>
                     @endif
                 </x-games.player-row>
             @endforeach
@@ -25,7 +38,7 @@
         @if ($tournament->status->value !== 'completed')
             <section class="mt-8 border-t border-stone-200 pt-6">
                 <h2 class="text-lg font-bold text-stone-950">Add player</h2>
-                <p class="mt-1 text-sm leading-6 text-stone-500">The player joins from the next unplayed round.</p>
+                <p class="mt-1 text-sm leading-6 text-stone-500">Add a player or pause someone who is temporarily unavailable. Changes apply from the next unplayed round.</p>
                 <button type="button" @click="showAddPlayer = true" class="mt-4 min-h-12 rounded-xl bg-[#c7f000] px-5 text-sm font-bold text-stone-950">+ Add player</button>
             </section>
         @endif

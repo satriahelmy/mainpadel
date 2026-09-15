@@ -107,6 +107,106 @@ class RosterEdgeTest extends TestCase
         self::assertSame(2, $membership->fresh()->left_at_round);
     }
 
+    public function test_temporary_unavailability_excludes_a_player_until_they_resume(): void
+    {
+        $tournament = $this->createGame([
+            'players' => ['A', 'B', 'C', 'D', 'E', 'F'],
+            'round_mode' => 'custom',
+            'number_of_rounds' => 2,
+        ]);
+        $membership = $tournament->tournamentPlayers()->latest('id')->firstOrFail();
+        $playerId = $membership->player_id;
+
+        $this->post(route('games.players.unavailable', [$tournament, $membership]))
+            ->assertRedirect(route('games.players', $tournament));
+        $membership->refresh();
+
+        self::assertSame(TournamentPlayerStatus::Active, $membership->status);
+        self::assertTrue($membership->fresh('absences')->hasOpenAbsence());
+        self::assertSame(1, $membership->absences()->firstOrFail()->unavailable_from_round);
+
+        $this->redraw($tournament);
+        $futureIds = $tournament->rounds()
+            ->where('status', RoundStatus::Scheduled)
+            ->with('matches.matchPlayers')
+            ->get()
+            ->flatMap(fn ($round) => $round->matches->flatMap(fn ($match) => $match->matchPlayers->pluck('player_id')))
+            ->all();
+        self::assertNotContains($playerId, $futureIds);
+
+        $this->post(route('games.players.available', [$tournament, $membership]))
+            ->assertRedirect(route('games.players', $tournament));
+        $membership->refresh();
+        self::assertFalse($membership->fresh('absences')->hasOpenAbsence());
+
+        $this->redraw($tournament);
+        $round = $tournament->rounds()->where('round_number', 1)->firstOrFail();
+        self::assertArrayHasKey((string) $playerId, $round->drawing_metrics['players']);
+    }
+
+    public function test_temporary_unavailability_during_a_partial_round_preserves_the_locked_round(): void
+    {
+        $tournament = $this->createGame([
+            'players' => ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+            'number_of_courts' => 2,
+            'round_mode' => 'custom',
+            'number_of_rounds' => 2,
+        ]);
+        $this->post(route('games.start', $tournament));
+        $firstRound = $tournament->rounds()->where('round_number', 1)->firstOrFail();
+        $firstMatch = $firstRound->matches()->with('matchPlayers')->firstOrFail();
+        $membership = $tournament->tournamentPlayers()->where('player_id', $firstMatch->matchPlayers->first()->player_id)->firstOrFail();
+
+        $this->put(route('games.score.update', [$tournament, $firstMatch]), ['team_a_score' => 12, 'team_b_score' => 9]);
+        $firstRound->refresh();
+        $snapshot = $this->matchSnapshot($firstRound);
+        $this->post(route('games.players.unavailable', [$tournament, $membership]))->assertRedirect();
+        $this->redraw($tournament);
+
+        $firstRound->refresh();
+        $futureRound = $tournament->rounds()->where('round_number', 2)->firstOrFail();
+        $futureIds = $futureRound->matches()->with('matchPlayers')->get()->flatMap(fn ($match) => $match->matchPlayers->pluck('player_id'))->all();
+
+        self::assertSame($snapshot, $this->matchSnapshot($firstRound));
+        self::assertNotContains($membership->player_id, $futureIds);
+        self::assertSame(2, $membership->fresh()->absences()->firstOrFail()->unavailable_from_round);
+
+        $this->post(route('games.players.available', [$tournament, $membership]))->assertRedirect();
+        $this->redraw($tournament);
+        self::assertArrayHasKey((string) $membership->player_id, $tournament->rounds()->where('round_number', 2)->firstOrFail()->drawing_metrics['players']);
+    }
+
+    public function test_a_player_can_pause_and_resume_more_than_once(): void
+    {
+        $tournament = $this->createGame([
+            'players' => ['A', 'B', 'C', 'D'],
+            'round_mode' => 'custom',
+            'number_of_rounds' => 4,
+        ]);
+        $membership = $tournament->tournamentPlayers()->latest('id')->firstOrFail();
+
+        $this->post(route('games.start', $tournament));
+        $this->scoreFirstMatch($tournament, 12, 9);
+        $this->post(route('games.players.unavailable', [$tournament, $membership]));
+        $this->redraw($tournament);
+        $this->post(route('games.start', $tournament));
+        $this->scoreRound($tournament, 2, 11, 10);
+        $this->post(route('games.players.available', [$tournament, $membership]));
+        $this->redraw($tournament);
+        $this->post(route('games.start', $tournament));
+        $this->scoreRound($tournament, 3, 12, 9);
+        $this->post(route('games.players.unavailable', [$tournament, $membership]));
+
+        $this->redraw($tournament);
+        $absences = $membership->fresh('absences')->absences->sortBy('unavailable_from_round')->values();
+
+        self::assertCount(2, $absences);
+        self::assertSame(2, $absences[0]->unavailable_from_round);
+        self::assertSame(3, $absences[0]->available_again_round);
+        self::assertSame(4, $absences[1]->unavailable_from_round);
+        self::assertNull($absences[1]->available_again_round);
+    }
+
     public function test_four_to_five_players_is_supported_by_a_future_redraw(): void
     {
         $tournament = $this->createGame(['players' => ['A', 'B', 'C', 'D'], 'round_mode' => 'custom', 'number_of_rounds' => 1]);
@@ -195,7 +295,12 @@ class RosterEdgeTest extends TestCase
 
     private function scoreFirstMatch(Tournament $tournament, int $scoreA, int $scoreB): void
     {
-        $match = $tournament->rounds()->with('matches')->firstOrFail()->matches->firstOrFail();
+        $this->scoreRound($tournament, 1, $scoreA, $scoreB);
+    }
+
+    private function scoreRound(Tournament $tournament, int $roundNumber, int $scoreA, int $scoreB): void
+    {
+        $match = $tournament->rounds()->where('round_number', $roundNumber)->with('matches')->firstOrFail()->matches->firstOrFail();
         $this->put(route('games.score.update', [$tournament, $match]), [
             'team_a_score' => $scoreA,
             'team_b_score' => $scoreB,
