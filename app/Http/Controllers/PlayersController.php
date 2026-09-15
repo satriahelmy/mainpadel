@@ -94,6 +94,40 @@ class PlayersController extends Controller
             ->with('redraw_summary', $this->drawingService->redrawSummary($tournament));
     }
 
+    public function applyUnavailableToCurrentRound(Tournament $tournament, TournamentPlayer $membership): RedirectResponse
+    {
+        abort_unless($membership->tournament_id === $tournament->id, 404);
+
+        try {
+            $this->playerService->applyUnavailableToCurrentRound($tournament, $membership);
+        } catch (\InvalidArgumentException $exception) {
+            return back()->withErrors(['player' => $exception->getMessage()]);
+        }
+
+        $tournament->refresh();
+
+        return redirect()->route('games.players', $tournament)
+            ->with('success', 'Player will be unavailable for the current unplayed round. Review the redraw.')
+            ->with('redraw_summary', $this->drawingService->redrawSummary($tournament));
+    }
+
+    public function includeInCurrentRound(Tournament $tournament, TournamentPlayer $membership): RedirectResponse
+    {
+        abort_unless($membership->tournament_id === $tournament->id, 404);
+
+        try {
+            $this->playerService->includeInCurrentRound($tournament, $membership);
+        } catch (\InvalidArgumentException $exception) {
+            return back()->withErrors(['player' => $exception->getMessage()]);
+        }
+
+        $tournament->refresh();
+
+        return redirect()->route('games.players', $tournament)
+            ->with('success', 'Player will be included in the current unplayed round. Review the redraw.')
+            ->with('redraw_summary', $this->drawingService->redrawSummary($tournament));
+    }
+
     public function redraw(ConfirmRedrawRequest $request, Tournament $tournament): RedirectResponse
     {
         try {

@@ -15,10 +15,12 @@ class DrawController extends Controller
     public function show(Tournament $tournament): View
     {
         $tournament->load(['tournamentPlayers.player', 'rounds.matches.matchPlayers.player']);
+        $redrawSummary = $this->drawingService->redrawSummary($tournament);
 
         return view('games.draw', [
             'tournament' => $tournament,
             'round' => $tournament->rounds->first(),
+            'redrawSummary' => $redrawSummary,
         ]);
     }
 

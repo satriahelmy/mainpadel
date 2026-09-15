@@ -21,6 +21,7 @@ class ExampleTest extends TestCase
             ->assertSee('Create free account')
             ->assertSee('<meta name="description"', false)
             ->assertSee('<link rel="canonical"', false)
+            ->assertSee('<link rel="icon"', false)
             ->assertSee('application/ld+json', false);
     }
 }

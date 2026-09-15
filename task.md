@@ -441,9 +441,11 @@ Handle roster changes during a live Game without changing completed history or s
 - [x] Store `joined_at_round` and make the player eligible only from the approved effective round.
 - [x] Add Stop Playing with confirmation explaining that completed results remain and future rounds change.
 - [x] Add a temporary Pause/Resume player action that changes eligibility only from the next unplayed round and keeps the player active for historical standings.
+- [x] Allow a late joiner to be explicitly included in an entirely unplayed current round before its drawing is regenerated.
 - [x] Set withdrawn status and `left_at_round`; exclude the player from newly generated drawings while retaining historical matches and standings.
 - [x] Calculate the exact locked/unplayed range in the redraw confirmation, for example “Rounds 1–3 will not change; Rounds 4–7 will be regenerated.”
 - [x] Require explicit Redraw Future Rounds confirmation; never silently replace an existing future drawing.
+- [x] Allow an entirely unplayed current round to be redrawn, while keeping a round with any completed match locked.
 - [x] Regenerate only eligible unplayed rounds in one transaction, rebuilding fairness history from locked rounds and applying the changed roster.
 - [x] Preserve completed matches and completed rounds byte-for-byte at the domain level, including their participants, teams, court, and scores.
 - [x] Define safe behavior for a withdrawal when the player is assigned to an uncompleted current match according to M0’s lock rule.

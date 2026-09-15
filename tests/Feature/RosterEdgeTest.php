@@ -6,6 +6,7 @@ use App\Enums\RoundStatus;
 use App\Enums\TournamentPlayerStatus;
 use App\Models\MatchModel;
 use App\Models\Tournament;
+use App\Models\TournamentPlayerAbsence;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -174,6 +175,75 @@ class RosterEdgeTest extends TestCase
         $this->post(route('games.players.available', [$tournament, $membership]))->assertRedirect();
         $this->redraw($tournament);
         self::assertArrayHasKey((string) $membership->player_id, $tournament->rounds()->where('round_number', 2)->firstOrFail()->drawing_metrics['players']);
+    }
+
+    public function test_temporary_unavailability_can_redraw_an_unplayed_current_round(): void
+    {
+        $tournament = $this->createGame([
+            'players' => ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+            'number_of_courts' => 2,
+            'round_mode' => 'custom',
+            'number_of_rounds' => 2,
+        ]);
+        $this->post(route('games.start', $tournament));
+        $membership = $tournament->tournamentPlayers()->latest('id')->firstOrFail();
+
+        $this->post(route('games.players.unavailable', [$tournament, $membership]))->assertRedirect();
+        self::assertSame(1, $membership->fresh()->absences()->firstOrFail()->unavailable_from_round);
+
+        $this->redraw($tournament);
+        $round = $tournament->rounds()->where('round_number', 1)->firstOrFail();
+        $assignedIds = $round->matches()->with('matchPlayers')->get()->flatMap(fn ($match) => $match->matchPlayers->pluck('player_id'))->all();
+
+        self::assertSame(RoundStatus::Scheduled, $round->status);
+        self::assertNotContains($membership->player_id, $assignedIds);
+        $this->get(route('games.show', $tournament))->assertOk()->assertSee('Start round 1');
+    }
+
+    public function test_a_future_pause_can_be_applied_to_the_unplayed_current_round(): void
+    {
+        $tournament = $this->createGame([
+            'players' => ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+            'number_of_courts' => 2,
+            'round_mode' => 'custom',
+            'number_of_rounds' => 2,
+        ]);
+        $this->post(route('games.start', $tournament));
+        $membership = $tournament->tournamentPlayers()->latest('id')->firstOrFail();
+        TournamentPlayerAbsence::create([
+            'tournament_player_id' => $membership->id,
+            'unavailable_from_round' => 2,
+        ]);
+
+        $this->post(route('games.players.unavailable.current', [$tournament, $membership]))
+            ->assertRedirect(route('games.players', $tournament));
+        self::assertSame(1, $membership->fresh()->absences()->firstOrFail()->unavailable_from_round);
+
+        $this->redraw($tournament);
+        $round = $tournament->rounds()->where('round_number', 1)->firstOrFail();
+        $assignedIds = $round->matches()->with('matchPlayers')->get()->flatMap(fn ($match) => $match->matchPlayers->pluck('player_id'))->all();
+
+        self::assertNotContains($membership->player_id, $assignedIds);
+    }
+
+    public function test_a_late_joiner_can_be_included_in_the_unplayed_current_round(): void
+    {
+        $tournament = $this->createGame([
+            'players' => ['A', 'B', 'C', 'D'],
+            'round_mode' => 'custom',
+            'number_of_rounds' => 2,
+        ]);
+        $this->post(route('games.start', $tournament));
+        $membership = $tournament->tournamentPlayers()->latest('id')->firstOrFail();
+        $membership->update(['joined_at_round' => 2]);
+
+        $this->post(route('games.players.include.current', [$tournament, $membership]))
+            ->assertRedirect(route('games.players', $tournament));
+        self::assertSame(1, $membership->fresh()->joined_at_round);
+
+        $this->redraw($tournament);
+        $round = $tournament->rounds()->where('round_number', 1)->firstOrFail();
+        self::assertArrayHasKey((string) $membership->player_id, $round->drawing_metrics['players']);
     }
 
     public function test_a_player_can_pause_and_resume_more_than_once(): void

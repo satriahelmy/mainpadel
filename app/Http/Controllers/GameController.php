@@ -6,6 +6,7 @@ use App\Enums\RoundStatus;
 use App\Enums\TournamentStatus;
 use App\Models\Tournament;
 use App\Services\StandingsService;
+use App\Services\TournamentDrawingService;
 use Illuminate\View\View;
 
 class GameController extends Controller
@@ -24,19 +25,24 @@ class GameController extends Controller
         return view('games.create');
     }
 
-    public function show(Tournament $tournament): View
+    public function show(Tournament $tournament, TournamentDrawingService $drawingService): View
     {
         $tournament->load(['tournamentPlayers.player', 'rounds.matches.matchPlayers.player']);
+        $redrawSummary = $drawingService->redrawSummary($tournament);
 
         if ($tournament->status === TournamentStatus::Draft) {
-            return view('games.draw', ['tournament' => $tournament, 'round' => $tournament->rounds->first()]);
+            return view('games.draw', [
+                'tournament' => $tournament,
+                'round' => $tournament->rounds->first(),
+                'redrawSummary' => $redrawSummary,
+            ]);
         }
 
         $round = $tournament->rounds->first(fn ($round): bool => $round->status === RoundStatus::Ongoing)
             ?? $tournament->rounds->filter(fn ($round): bool => $round->status === RoundStatus::Completed)->sortByDesc('round_number')->first()
             ?? $tournament->rounds->first(fn ($round): bool => $round->status === RoundStatus::Scheduled);
 
-        return view('games.play', compact('tournament', 'round'));
+        return view('games.play', compact('tournament', 'round', 'redrawSummary'));
     }
 
     public function standings(Tournament $tournament, StandingsService $standingsService): View

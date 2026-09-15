@@ -16,6 +16,7 @@ use App\Services\Drawing\DrawingMatch;
 use App\Services\Drawing\DrawingRequest;
 use App\Services\Drawing\DrawingService;
 use App\Services\Drawing\FairnessHistory;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 final class TournamentDrawingService
@@ -124,9 +125,8 @@ final class TournamentDrawingService
     {
         return DB::transaction(function () use ($tournament): ?Round {
             $lockedTournament = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
-            $rounds = $lockedTournament->rounds()->orderBy('round_number')->get();
-            $firstScheduled = $rounds->firstWhere('status', RoundStatus::Scheduled);
-            $startRound = $firstScheduled?->round_number ?? (($rounds->max('round_number') ?? 0) + 1);
+            $rounds = $this->roundsForRedraw($lockedTournament);
+            $startRound = $this->redrawStartRound($lockedTournament, $rounds);
 
             if ($startRound > $lockedTournament->number_of_rounds) {
                 return null;
@@ -134,6 +134,10 @@ final class TournamentDrawingService
 
             $rounds->where('status', RoundStatus::Scheduled)
                 ->filter(fn (Round $round): bool => $round->round_number >= $startRound)
+                ->each(fn (Round $round): bool => (bool) $round->delete());
+            $rounds->filter(fn (Round $round): bool => $round->round_number === $startRound
+                && $round->status === RoundStatus::Ongoing
+                && (int) $round->completed_matches_count === 0)
                 ->each(fn (Round $round): bool => (bool) $round->delete());
 
             $history = $this->historyBefore($lockedTournament, $startRound, $this->activePlayerIds($lockedTournament, $startRound));
@@ -151,9 +155,8 @@ final class TournamentDrawingService
 
     public function redrawSummary(Tournament $tournament): array
     {
-        $rounds = $tournament->rounds()->orderBy('round_number')->get();
-        $firstScheduled = $rounds->firstWhere('status', RoundStatus::Scheduled);
-        $from = $firstScheduled?->round_number ?? (($rounds->max('round_number') ?? 0) + 1);
+        $rounds = $this->roundsForRedraw($tournament);
+        $from = $this->redrawStartRound($tournament, $rounds);
         $last = $rounds->max('round_number') ?? $tournament->number_of_rounds;
 
         return [
@@ -161,6 +164,28 @@ final class TournamentDrawingService
             'to' => min($tournament->number_of_rounds, max($from, $last)),
             'has_future' => $from <= $tournament->number_of_rounds,
         ];
+    }
+
+    private function roundsForRedraw(Tournament $tournament): Collection
+    {
+        return $tournament->rounds()
+            ->withCount(['matches as completed_matches_count' => fn ($query) => $query->where('status', MatchStatus::Completed)])
+            ->orderBy('round_number')
+            ->get();
+    }
+
+    private function redrawStartRound(Tournament $tournament, Collection $rounds): int
+    {
+        $unplayedOngoing = $rounds->first(fn (Round $round): bool => $round->status === RoundStatus::Ongoing
+            && (int) $round->completed_matches_count === 0);
+
+        if ($unplayedOngoing !== null) {
+            return $unplayedOngoing->round_number;
+        }
+
+        $firstScheduled = $rounds->firstWhere('status', RoundStatus::Scheduled);
+
+        return $firstScheduled?->round_number ?? (($rounds->max('round_number') ?? 0) + 1);
     }
 
     public function start(Tournament $tournament): Tournament

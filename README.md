@@ -19,7 +19,7 @@ MainPadel supports:
 - Sequential rounds with balanced matches, rests, partners, and opponents.
 - Fast score entry with server-side validation.
 - Derived individual standings during and after a Game.
-- Late joins, temporary player pauses, player withdrawal, and explicit regeneration of future unplayed rounds.
+- Late joins, temporary player pauses, player withdrawal, and explicit regeneration of unplayed current/future rounds.
 - Historical match and round assignments that remain unchanged once locked.
 
 ## Technology

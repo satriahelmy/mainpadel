@@ -49,6 +49,8 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/games/{tournament}/players', [PlayersController::class, 'index'])->name('games.players');
         Route::post('/games/{tournament}/players', [PlayersController::class, 'store'])->name('games.players.store');
         Route::post('/games/{tournament}/players/{membership}/unavailable', [PlayersController::class, 'markUnavailable'])->name('games.players.unavailable');
+        Route::post('/games/{tournament}/players/{membership}/unavailable/current', [PlayersController::class, 'applyUnavailableToCurrentRound'])->name('games.players.unavailable.current');
+        Route::post('/games/{tournament}/players/{membership}/include/current', [PlayersController::class, 'includeInCurrentRound'])->name('games.players.include.current');
         Route::post('/games/{tournament}/players/{membership}/available', [PlayersController::class, 'markAvailable'])->name('games.players.available');
         Route::post('/games/{tournament}/players/{membership}/withdraw', [PlayersController::class, 'withdraw'])->name('games.players.withdraw');
         Route::post('/games/{tournament}/redraw', [PlayersController::class, 'redraw'])->name('games.redraw');

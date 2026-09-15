@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="py-6 pb-28 sm:py-10 sm:pb-10">
+    <div x-data="{ showRedraw: false, submitting: false }" @keydown.escape.window="showRedraw = false" class="py-6 pb-28 sm:py-10 sm:pb-10">
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">Game setup</p>
@@ -55,6 +55,9 @@
                     @csrf
                     <button type="submit" :disabled="submitting" class="min-h-13 w-full rounded-xl bg-[#c7f000] px-5 text-base font-bold text-stone-950 transition hover:bg-[#b8df00] disabled:cursor-wait disabled:opacity-60"><span x-show="!submitting">Start Game</span><span x-show="submitting" x-cloak>Starting…</span></button>
                 </form>
+                @if ($redrawSummary['has_future'] && $tournament->status->value !== 'completed')
+                    <button type="button" @click="showRedraw = true" class="mt-4 min-h-12 w-full rounded-xl border border-stone-300 bg-white px-5 text-sm font-bold text-stone-800 hover:border-stone-950 hover:text-stone-950">Regenerate this draw</button>
+                @endif
                 <div class="mt-4 flex flex-col items-center gap-2 text-sm font-bold text-stone-600 sm:flex-row sm:justify-center sm:gap-5">
                     <a href="{{ route('games.rounds', $tournament) }}" class="min-h-11 py-3 hover:text-stone-950">View all rounds</a>
                     <a href="{{ route('games.show', $tournament) }}" class="min-h-11 py-3 hover:text-stone-950">View current game</a>
@@ -64,5 +67,19 @@
         @endif
 
         <x-games.bottom-navigation :tournament="$tournament" active="play" />
+
+        @if ($round && $redrawSummary['has_future'] && $tournament->status->value !== 'completed')
+            <x-ui.dialog state="showRedraw" kicker="Confirm change" title="Regenerate this draw?" labelledby="draw-redraw-title" close-action="showRedraw = false" close-label="Close redraw dialog">
+                <p class="mt-3 text-sm leading-6 text-stone-600">Rounds {{ $redrawSummary['from'] }}–{{ $redrawSummary['to'] }} will be regenerated. No match has been played yet, so the current drawing can still change.</p>
+                <form method="POST" action="{{ route('games.redraw', $tournament) }}" @submit="submitting = true" class="mt-5">
+                    @csrf
+                    <input type="hidden" name="confirmed" value="1">
+                    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button type="button" @click="showRedraw = false" class="min-h-12 rounded-xl border border-stone-300 bg-white px-5 text-sm font-bold text-stone-800">Cancel</button>
+                        <button type="submit" :disabled="submitting" class="min-h-12 rounded-xl bg-[#c7f000] px-5 text-sm font-bold text-stone-950 disabled:cursor-wait disabled:opacity-60"><span x-show="!submitting">Regenerate draw</span><span x-show="submitting" x-cloak>Regenerating…</span></button>
+                    </div>
+                </form>
+            </x-ui.dialog>
+        @endif
     </div>
 @endsection

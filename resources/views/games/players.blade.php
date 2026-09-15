@@ -2,6 +2,10 @@
 
 @section('content')
     <div x-data="{ showAddPlayer: false, showRedraw: false, submitting: false }" @keydown.escape.window="showAddPlayer = false; showRedraw = false" class="py-6 pb-28 sm:py-10 sm:pb-10">
+        @php
+            $unplayedCurrentRound = $tournament->rounds->first(fn ($round): bool => $round->status->value === 'ongoing'
+                && ! $round->matches->contains(fn ($match): bool => $match->status->value === 'completed'));
+        @endphp
         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">Players</p>
         <div class="mt-2 flex items-end justify-between gap-4">
             <h1 class="text-3xl font-bold tracking-tight text-stone-950">{{ $tournament->name }}</h1>
@@ -11,10 +15,23 @@
         <div class="mt-8 divide-y divide-stone-200 border-y border-stone-200">
             @foreach ($participation as $row)
                 @php($membership = $row['membership'])
-                <x-games.player-row :membership="$membership" :played="$row['played']" :rests="$row['rests']" :unavailable="$membership->hasOpenAbsence()">
+                @php($openAbsence = $membership->absences->first(fn ($absence): bool => $absence->available_again_round === null))
+                <x-games.player-row :membership="$membership" :played="$row['played']" :rests="$row['rests']" :unavailable="$openAbsence !== null">
                     @if ($membership->status->value === 'active' && $tournament->status->value !== 'completed')
                         <div class="flex flex-wrap justify-end gap-2">
-                            @if ($membership->hasOpenAbsence())
+                            @if ($unplayedCurrentRound !== null && $membership->joined_at_round > $unplayedCurrentRound->round_number)
+                                <form method="POST" action="{{ route('games.players.include.current', [$tournament, $membership]) }}" onsubmit="return confirm('Include this late joiner in the current unplayed round? The current drawing will be replaced after confirmation.')">
+                                    @csrf
+                                    <button type="submit" class="min-h-11 px-2 text-sm font-bold text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-950">Include in round</button>
+                                </form>
+                            @endif
+                            @if ($openAbsence !== null && $unplayedCurrentRound !== null && $openAbsence->unavailable_from_round > $unplayedCurrentRound->round_number)
+                                <form method="POST" action="{{ route('games.players.unavailable.current', [$tournament, $membership]) }}" onsubmit="return confirm('Apply this pause to the current unplayed round? The current drawing will be replaced after confirmation.')">
+                                    @csrf
+                                    <button type="submit" class="min-h-11 px-2 text-sm font-bold text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-950">Apply to round</button>
+                                </form>
+                            @endif
+                            @if ($openAbsence !== null)
                                 <form method="POST" action="{{ route('games.players.available', [$tournament, $membership]) }}" onsubmit="return confirm('Make this player available from the next unplayed round? Future rounds will need a redraw.')">
                                     @csrf
                                     <button type="submit" class="min-h-11 px-2 text-sm font-bold text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-950">Resume</button>

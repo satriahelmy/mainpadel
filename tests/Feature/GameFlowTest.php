@@ -31,6 +31,7 @@ class GameFlowTest extends TestCase
         $tournament = Tournament::query()->firstOrFail();
 
         $response->assertRedirect(route('games.draw', $tournament));
+        $this->get(route('games.draw', $tournament))->assertOk()->assertSee('Regenerate this draw');
         self::assertSame('auto', $tournament->round_mode->value);
         self::assertSame(5, $tournament->number_of_rounds);
         self::assertCount(5, $tournament->rounds);
@@ -200,12 +201,15 @@ class GameFlowTest extends TestCase
 
     public function test_game_views_render_for_the_live_session(): void
     {
-        $this->post(route('games.store'), $this->gameData(['round_mode' => 'custom', 'number_of_rounds' => 1, 'players' => ['A', 'B', 'C', 'D']]));
+        $this->post(route('games.store'), $this->gameData(['round_mode' => 'custom', 'number_of_rounds' => 2, 'players' => ['A', 'B', 'C', 'D']]));
         $tournament = Tournament::query()->firstOrFail();
         $this->post(route('games.start', $tournament));
         $match = $tournament->rounds()->with('matches')->firstOrFail()->matches->firstOrFail();
 
-        $this->get(route('games.show', $tournament))->assertOk()->assertSee('Enter Result');
+        $this->get(route('games.show', $tournament))
+            ->assertOk()
+            ->assertSee('Enter Result')
+            ->assertSee('Regenerate future rounds');
         $this->get(route('games.rounds', $tournament))->assertOk()->assertSee('Round 1');
         $this->get(route('games.standings', $tournament))->assertOk()->assertSee('Live standings');
         $this->get(route('games.players', $tournament))->assertOk()->assertSee('Players');

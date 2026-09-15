@@ -126,12 +126,87 @@ final class PlayerManagementService
         });
     }
 
+    public function applyUnavailableToCurrentRound(Tournament $tournament, TournamentPlayer $membership): TournamentPlayer
+    {
+        return DB::transaction(function () use ($tournament, $membership): TournamentPlayer {
+            $lockedTournament = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
+            $this->assertRosterCanChange($lockedTournament);
+
+            $lockedMembership = $lockedTournament->tournamentPlayers()
+                ->with('player')
+                ->findOrFail($membership->id);
+
+            if ($lockedMembership->status !== TournamentPlayerStatus::Active) {
+                throw new \InvalidArgumentException('This player is no longer active in the Game.');
+            }
+
+            $currentRound = $lockedTournament->rounds()
+                ->where('status', 'ongoing')
+                ->orderByDesc('round_number')
+                ->first();
+
+            if ($currentRound === null || $currentRound->hasCompletedMatch()) {
+                throw new \InvalidArgumentException('The current round is already locked. This change applies from the next unplayed round.');
+            }
+
+            $lockedMembership->load(['absences' => fn ($query) => $query->whereNull('available_again_round')->latest('unavailable_from_round')]);
+            $absence = $lockedMembership->absences->first();
+
+            if (! $absence instanceof TournamentPlayerAbsence) {
+                throw new \InvalidArgumentException('This player is not marked unavailable.');
+            }
+
+            if ($absence->unavailable_from_round <= $currentRound->round_number) {
+                throw new \InvalidArgumentException('This player is already unavailable for the current round.');
+            }
+
+            $absence->update(['unavailable_from_round' => $currentRound->round_number]);
+
+            return $lockedMembership->fresh(['player', 'absences']);
+        });
+    }
+
+    public function includeInCurrentRound(Tournament $tournament, TournamentPlayer $membership): TournamentPlayer
+    {
+        return DB::transaction(function () use ($tournament, $membership): TournamentPlayer {
+            $lockedTournament = Tournament::query()->lockForUpdate()->findOrFail($tournament->id);
+            $this->assertRosterCanChange($lockedTournament);
+
+            $lockedMembership = $lockedTournament->tournamentPlayers()
+                ->with('player')
+                ->findOrFail($membership->id);
+
+            if ($lockedMembership->status !== TournamentPlayerStatus::Active) {
+                throw new \InvalidArgumentException('This player is no longer active in the Game.');
+            }
+
+            $currentRound = $lockedTournament->rounds()
+                ->where('status', 'ongoing')
+                ->orderByDesc('round_number')
+                ->first();
+
+            if ($currentRound === null || $currentRound->hasCompletedMatch()) {
+                throw new \InvalidArgumentException('The current round is already locked. This player will join from the next unplayed round.');
+            }
+
+            if ($lockedMembership->joined_at_round <= $currentRound->round_number) {
+                throw new \InvalidArgumentException('This player is already eligible for the current round.');
+            }
+
+            $lockedMembership->update(['joined_at_round' => $currentRound->round_number]);
+
+            return $lockedMembership->fresh(['player', 'absences']);
+        });
+    }
+
     public function effectiveNextRound(Tournament $tournament): int
     {
         $ongoingRound = $tournament->rounds()->where('status', 'ongoing')->orderByDesc('round_number')->first();
 
         if ($ongoingRound !== null) {
-            return $ongoingRound->round_number + 1;
+            return $ongoingRound->hasCompletedMatch()
+                ? $ongoingRound->round_number + 1
+                : $ongoingRound->round_number;
         }
 
         $scheduledRound = $tournament->rounds()->where('status', 'scheduled')->orderBy('round_number')->first();

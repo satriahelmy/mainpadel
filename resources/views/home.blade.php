@@ -117,7 +117,7 @@
                     <p class="mt-2 max-w-sm text-sm leading-6 text-stone-600">Create your first game and MainPadel will handle the draw.</p>
                 </div>
             @else
-                <div class="mt-4 divide-y divide-stone-200 border-y border-stone-200">
+                <div class="mt-6 divide-y divide-stone-200 border-y border-stone-200">
                     @foreach ($games as $game)
                         <a href="{{ route('games.show', $game) }}" class="flex min-h-20 items-center justify-between gap-4 py-4 hover:bg-white/60">
                             <span>

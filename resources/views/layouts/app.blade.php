@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>@yield('title', 'MainPadel')</title>
+        <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
         <meta name="description" content="@yield('meta_description', 'MainPadel is a simple padel game organizer for fair draws, fast score entry, and live individual standings.')">
         <meta name="robots" content="@yield('robots', 'noindex, nofollow')">
         <link rel="canonical" href="{{ url()->current() }}">
