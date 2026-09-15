@@ -1,12 +1,39 @@
 @extends('layouts.app')
 
+@section('title', 'MainPadel — Fair Padel Game Draws & Live Standings')
+@section('meta_description', 'Run fair padel games without a spreadsheet. MainPadel creates balanced draws, tracks scores, and keeps individual standings live.')
+@section('robots', auth()->check() ? 'noindex, nofollow' : 'index, follow')
+
+@push('head')
+    @unless (auth()->check())
+        <script type="application/ld+json">
+            {!! json_encode([
+                '@context' => 'https://schema.org',
+                '@type' => 'WebApplication',
+                'name' => 'MainPadel',
+                'url' => route('home'),
+                'description' => 'A simple padel game organizer for fair draws, fast score entry, and live individual standings.',
+                'applicationCategory' => 'SportsApplication',
+                'operatingSystem' => 'Web browser',
+                'inLanguage' => 'en',
+                'featureList' => [
+                    'Fair padel game draws',
+                    'Fast score entry',
+                    'Live individual standings',
+                    'Player rotation management',
+                ],
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+        </script>
+    @endunless
+@endpush
+
 @section('content')
     @guest
         <div class="py-6 sm:py-10">
             <section class="grid gap-10 border-b border-stone-200 py-10 sm:grid-cols-[1.15fr_0.85fr] sm:items-center sm:py-16">
                 <div>
                     <p class="text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">Padel rotation, made easy</p>
-                    <h1 class="mt-3 max-w-xl text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl">A fair draw for every game.</h1>
+                    <h1 class="mt-3 max-w-xl text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl">Fair padel game draws, without the spreadsheet.</h1>
                     <p class="mt-5 max-w-lg text-base leading-7 text-stone-600">MainPadel helps you create a session, balance the rotation, record scores, and keep individual standings live—without the spreadsheet.</p>
                     <div class="mt-8 flex flex-col gap-3 sm:flex-row">
                         <a href="{{ route('register') }}" class="inline-flex min-h-13 items-center justify-center rounded-xl bg-[#c7f000] px-6 text-base font-bold text-stone-950 transition hover:bg-[#b8df00]">Create free account</a>

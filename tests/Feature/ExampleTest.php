@@ -16,6 +16,11 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertOk()->assertSee('A fair draw for every game.')->assertSee('Create free account');
+        $response->assertOk()
+            ->assertSee('Fair padel game draws, without the spreadsheet.')
+            ->assertSee('Create free account')
+            ->assertSee('<meta name="description"', false)
+            ->assertSee('<link rel="canonical"', false)
+            ->assertSee('application/ld+json', false);
     }
 }

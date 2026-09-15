@@ -4,8 +4,21 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <title>{{ $title ?? 'MainPadel' }} · MainPadel</title>
+        <title>@yield('title', 'MainPadel')</title>
+        <meta name="description" content="@yield('meta_description', 'MainPadel is a simple padel game organizer for fair draws, fast score entry, and live individual standings.')">
+        <meta name="robots" content="@yield('robots', 'noindex, nofollow')">
+        <link rel="canonical" href="{{ url()->current() }}">
+        <meta name="theme-color" content="#f7f7f5">
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="MainPadel">
+        <meta property="og:title" content="@yield('title', 'MainPadel')">
+        <meta property="og:description" content="@yield('meta_description', 'MainPadel is a simple padel game organizer for fair draws, fast score entry, and live individual standings.')">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta name="twitter:card" content="summary">
+        <meta name="twitter:title" content="@yield('title', 'MainPadel')">
+        <meta name="twitter:description" content="@yield('meta_description', 'MainPadel is a simple padel game organizer for fair draws, fast score entry, and live individual standings.')">
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @stack('head')
     </head>
     <body class="min-h-screen font-sans antialiased">
         <div class="mx-auto min-h-screen w-full max-w-3xl px-4 pb-10 sm:px-6">
