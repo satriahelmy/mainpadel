@@ -1,59 +1,162 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# MainPadel
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+MainPadel is a focused web utility for organizing rotating padel games. It helps an organizer create a Game, generate fair draws, play through rounds, enter scores quickly, and follow live individual standings.
 
-## About Laravel
+The application is intentionally small and practical: server-rendered Laravel pages, lightweight Alpine.js interactions, and a MySQL database that can run on standard shared hosting.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Product flow
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+```text
+Create Game → Add Players → Generate Draw → Play → Enter Score
+          → Next Round → Live Individual Standings
+```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+MainPadel supports:
 
-## Learning Laravel
+- User registration, sign in, sign out, and per-user Game ownership.
+- Mobile-first Game setup with players, courts, target points, and Auto or Custom rounds.
+- Fair draw generation with hard-constraint validation and configurable fairness scoring.
+- Sequential rounds with balanced matches, rests, partners, and opponents.
+- Fast score entry with server-side validation.
+- Derived individual standings during and after a Game.
+- Late joins, player withdrawal, and explicit regeneration of future unplayed rounds.
+- Historical match and round assignments that remain unchanged once locked.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Technology
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- PHP 8.2+
+- Laravel 12
+- MySQL
+- Blade
+- Alpine.js
+- Tailwind CSS 4
+- Vite
 
-## Laravel Sponsors
+The app does not require React, Vue, Inertia, Livewire, Redis, queues, WebSockets, Docker, or other runtime services beyond PHP and MySQL.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Local setup
 
-### Premium Partners
+### Requirements
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Install PHP, Composer, Node.js/npm, and MySQL locally. Create an empty database named `mainpadel` and make sure the database user has permission to run migrations.
 
-## Contributing
+### Install
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+From the project directory:
 
-## Code of Conduct
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+npm install
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+On Windows PowerShell, use this instead of `cp`:
 
-## Security Vulnerabilities
+```powershell
+Copy-Item .env.example .env
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Update the database values in `.env`:
 
-## License
+```dotenv
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=mainpadel
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Then run the database migrations and build the frontend assets:
+
+```bash
+php artisan migrate
+npm run build
+```
+
+Start the local server:
+
+```bash
+php artisan serve
+```
+
+Open `http://localhost:8000`, register an account, and create a Game.
+
+Never commit `.env` or real database credentials. Use environment variables managed by the deployment host for production.
+
+## Drawing Engine
+
+The most important domain component lives in [`app/Services/Drawing`](app/Services/Drawing). It is isolated from controllers, Blade views, and Eloquent persistence so it can be tested with plain input and output objects.
+
+The engine:
+
+1. Generates bounded guided candidates rather than using a simple random shuffle.
+2. Validates hard constraints before considering fairness.
+3. Scores match-count imbalance, rest imbalance, repeated partners, repeated opponents, and consecutive rests.
+4. Uses configurable weights and deterministic tie-breaking.
+5. Returns fairness metrics for automated comparison.
+
+Required roster/court scenarios are covered by unit tests, including 4/1, 5/1, 6/1, 8/1, 8/2, 10/2, 12/2, and 12/3 players/courts.
+
+## Useful commands
+
+```bash
+# Clear cached configuration before tests when local environment values changed
+php artisan config:clear
+
+# Run the full automated suite
+php artisan test
+
+# Check code style without changing files
+vendor/bin/pint --test
+
+# Build production assets
+npm run build
+
+# Cache Blade views for a production-like check
+php artisan view:cache
+```
+
+The Composer test script also clears configuration before running the suite:
+
+```bash
+composer test
+```
+
+## Shared hosting deployment
+
+The application is designed for ordinary PHP/MySQL hosting:
+
+1. Point the web server document root at the project’s `public` directory.
+2. Upload the application code without `.env`, or create `.env` directly on the server.
+3. Install PHP dependencies with `composer install --no-dev --optimize-autoloader`.
+4. Build assets during deployment with `npm run build`, or upload the generated `public/build` directory.
+5. Configure production MySQL credentials and set `APP_DEBUG=false`.
+6. Run `php artisan migrate --force`.
+7. Ensure `storage` and `bootstrap/cache` are writable by the web process.
+8. Use file sessions, file cache, and synchronous jobs unless the hosting environment explicitly supports another option.
+
+No queue worker, WebSocket server, Redis instance, or container runtime is required.
+
+## Domain structure
+
+- `app/Models` — User, Game/Tournament, Player, Round, Match, and roster relationships.
+- `app/Http/Controllers` — thin HTTP actions for authentication and Game screens.
+- `app/Services` — Game creation, drawing orchestration, scoring, standings, and roster management.
+- `app/Services/Drawing` — framework-independent candidate generation, validation, scoring, history, and metrics.
+- `resources/views` — Blade layouts, landing page, authentication screens, Game screens, and navigation.
+- `tests/Unit/DrawingEngineTest.php` — Drawing Engine constraints, reproducibility, fairness, and edge cases.
+- `tests/Feature` — authentication, ownership, and end-to-end Game flow coverage.
+
+## Current scope and limitations
+
+- Authentication currently covers registration, sign in, and sign out. Password reset, email verification, social login, roles, and admin features are not included.
+- Auto rounds use the configured bounded heuristic documented in `config/mainpadel.php`.
+- Completed match assignments and rounds are immutable. Score corrections, where allowed, update score fields and derived standings only.
+- Fairness metrics are returned by the Drawing Engine but are not currently persisted as historical records.
+- Games created before user ownership was introduced may have a null `user_id` and require an explicit data migration policy before they can be reopened.
+
+## Source of truth
+
+Product requirements are documented in [`prd.md`](prd.md), and UX/design constraints are documented in [`design.md`](design.md). Implementation sequencing and progress are tracked in [`task.md`](task.md).
