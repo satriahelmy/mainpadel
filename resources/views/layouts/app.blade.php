@@ -11,9 +11,21 @@
         <div class="mx-auto min-h-screen w-full max-w-3xl px-4 pb-10 sm:px-6">
             <header class="flex items-center justify-between py-5 sm:py-7">
                 <a href="{{ route('home') }}" class="text-lg font-bold tracking-tight">MAINPADEL</a>
-                @if (isset($tournament) && $tournament->exists)
-                    <a href="{{ route('games.show', $tournament) }}" class="text-sm font-semibold text-stone-600 hover:text-stone-950">Back to game</a>
-                @endif
+                <div class="flex items-center gap-4">
+                    @if (isset($tournament) && $tournament->exists)
+                        <a href="{{ route('games.show', $tournament) }}" class="text-sm font-semibold text-stone-600 hover:text-stone-950">Back to game</a>
+                    @endif
+                    @auth
+                        <span class="hidden text-sm text-stone-500 sm:inline">{{ auth()->user()->name }}</span>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="min-h-11 text-sm font-semibold text-stone-600 underline decoration-stone-300 underline-offset-4 hover:text-stone-950">Sign out</button>
+                        </form>
+                    @else
+                        <a href="{{ route('login') }}" class="text-sm font-semibold text-stone-600 hover:text-stone-950">Sign in</a>
+                        <a href="{{ route('register') }}" class="text-sm font-semibold text-stone-950 underline decoration-stone-300 underline-offset-4">Register</a>
+                    @endauth
+                </div>
             </header>
 
             @if (session('success'))

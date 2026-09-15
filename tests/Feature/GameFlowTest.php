@@ -7,6 +7,7 @@ use App\Enums\RoundStatus;
 use App\Enums\TournamentPlayerStatus;
 use App\Enums\TournamentStatus;
 use App\Models\Tournament;
+use App\Models\User;
 use App\Services\StandingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,6 +15,13 @@ use Tests\TestCase;
 class GameFlowTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->actingAs(User::factory()->create());
+    }
 
     public function test_game_creation_persists_roster_and_full_auto_schedule(): void
     {

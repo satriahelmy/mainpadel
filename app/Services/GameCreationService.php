@@ -7,13 +7,14 @@ use App\Enums\TournamentPlayerStatus;
 use App\Enums\TournamentStatus;
 use App\Models\Player;
 use App\Models\Tournament;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 final class GameCreationService
 {
     public function __construct(private readonly AutoRoundPlanner $autoRoundPlanner) {}
 
-    public function create(array $data): Tournament
+    public function create(User $user, array $data): Tournament
     {
         $names = array_values(array_filter(array_map(static fn ($name): string => trim((string) $name), $data['players'] ?? [])));
 
@@ -26,8 +27,9 @@ final class GameCreationService
             ? (int) ($data['number_of_rounds'] ?? 0)
             : $this->autoRoundPlanner->forPlayerCount(count($names));
 
-        return DB::transaction(function () use ($data, $names, $roundMode, $numberOfRounds): Tournament {
+        return DB::transaction(function () use ($user, $data, $names, $roundMode, $numberOfRounds): Tournament {
             $tournament = Tournament::create([
+                'user_id' => $user->id,
                 'name' => trim((string) $data['name']),
                 'played_at' => $data['played_at'],
                 'number_of_courts' => (int) $data['number_of_courts'],

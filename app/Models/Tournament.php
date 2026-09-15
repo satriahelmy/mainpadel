@@ -6,6 +6,7 @@ use App\Enums\RoundMode;
 use App\Enums\TournamentStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -14,6 +15,7 @@ class Tournament extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
         'played_at',
         'number_of_courts',
@@ -42,6 +44,11 @@ class Tournament extends Model
         return $this->belongsToMany(Player::class, 'tournament_players')
             ->withPivot(['status', 'joined_at_round', 'left_at_round'])
             ->withTimestamps();
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function tournamentPlayers(): HasMany

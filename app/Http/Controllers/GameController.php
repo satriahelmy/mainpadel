@@ -12,7 +12,7 @@ class GameController extends Controller
 {
     public function index(): View
     {
-        $games = Tournament::query()
+        $games = request()->user()->tournaments()
             ->latest('played_at')
             ->latest('id')
             ->take(8)
