@@ -12,10 +12,10 @@ class ExampleTest extends TestCase
     /**
      * A basic test example.
      */
-    public function test_guests_are_redirected_to_sign_in(): void
+    public function test_guests_can_see_the_public_landing_page(): void
     {
         $response = $this->get('/');
 
-        $response->assertRedirect(route('login'));
+        $response->assertOk()->assertSee('A fair draw for every game.')->assertSee('Create free account');
     }
 }

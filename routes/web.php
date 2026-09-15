@@ -12,6 +12,8 @@ use App\Services\GameCreationService;
 use App\Services\TournamentDrawingService;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/', [GameController::class, 'index'])->name('home');
+
 Route::middleware('guest')->group(function (): void {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register']);
@@ -21,7 +23,6 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::get('/', [GameController::class, 'index'])->name('home');
     Route::get('/games/create', [GameController::class, 'create'])->name('games.create');
     Route::post('/games', function (StoreTournamentRequest $request, GameCreationService $creationService, TournamentDrawingService $drawingService) {
         $tournament = $creationService->create($request->user(), $request->validated());

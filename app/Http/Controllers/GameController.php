@@ -12,11 +12,9 @@ class GameController extends Controller
 {
     public function index(): View
     {
-        $games = request()->user()->tournaments()
-            ->latest('played_at')
-            ->latest('id')
-            ->take(8)
-            ->get();
+        $games = auth()->check()
+            ? request()->user()->tournaments()->latest('played_at')->latest('id')->take(8)->get()
+            : collect();
 
         return view('home', compact('games'));
     }
